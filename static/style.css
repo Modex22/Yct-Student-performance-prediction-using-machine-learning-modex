@@ -84,6 +84,7 @@ a { color: inherit; }
   letter-spacing: 0.03em;
 }
 
+.mobile-navigation > summary { display: none; }
 .sidebar nav { display: flex; flex-direction: column; gap: 0.2rem; }
 .nav-item {
   display: flex;
@@ -128,17 +129,55 @@ a { color: inherit; }
 @media (max-width: 880px) {
   .shell { flex-direction: column; }
   .sidebar {
+    position: relative;
+    z-index: 5;
     width: 100%;
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     padding: 0.75rem 1rem;
-    gap: 1rem;
-    overflow-x: auto;
+    gap: 0.75rem;
   }
-  .sidebar nav { flex-direction: row; }
+  .sidebar-brand { min-width: 0; }
+  .sidebar-brand .brand-text { font-size: 0.92rem; }
+  .mobile-navigation { position: relative; flex: 0 0 auto; }
+  .mobile-navigation > summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-width: 48px;
+    min-height: 44px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .mobile-navigation > summary::-webkit-details-marker { display: none; }
+  .menu-icon { color: var(--accent-strong); font-size: 1.1rem; line-height: 1; }
+  .mobile-navigation nav {
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: min(18rem, calc(100vw - 2rem));
+    padding: 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #101a14;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
+  }
+  .mobile-navigation .nav-item { min-height: 44px; }
   .sidebar-footer { display: none; }
-  .topbar { padding: 1.1rem 1rem; }
-  .content { padding: 1.25rem 1rem 2.5rem; }
+  .topbar { padding: 1rem clamp(1rem, 4vw, 1.5rem); }
+  .content { width: 100%; padding: 1.25rem clamp(1rem, 4vw, 1.5rem) 2.5rem; }
 }
 
 h1 { margin-bottom: 0.25rem; }
@@ -681,6 +720,48 @@ h1 { margin-bottom: 0.25rem; }
 }
 
 .history-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+
+/* ---- Responsive refinements ---- */
+.content > *, .topbar > * { min-width: 0; }
+.upload-form, .chart-card, .at-risk-panel, .results-panel, .trend-card,
+.score-breakdown, .recommendations, .input-summary { max-width: 100%; }
+.results-table { min-width: 620px; }
+.metrics-table { min-width: 420px; }
+input, select, button, textarea { max-width: 100%; }
+button, .btn-primary, .btn-secondary, .btn-ghost { min-height: 44px; }
+.scan-doc { width: min(260px, 100%); }
+.figure, .chart-card svg, .trend-card svg { display: block; width: 100%; height: auto; }
+
+@media (max-width: 600px) {
+  .sidebar { padding: 0.65rem 0.75rem; }
+  .sidebar-brand { gap: 0.5rem; }
+  .sidebar-brand .brand-sub { font-size: 0.62rem; }
+  .topbar { align-items: flex-start; }
+  .topbar h1 { font-size: clamp(1.15rem, 5vw, 1.4rem); overflow-wrap: anywhere; }
+  .content { padding: 1rem 0.75rem 2rem; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); gap: 0.85rem; }
+  .form-field input, .form-field select { width: 100%; min-height: 44px; }
+  .btn-primary, .btn-secondary, .btn-ghost { justify-content: center; }
+  .upload-form, .score-breakdown, .recommendations, .input-summary,
+  .chart-card, .at-risk-panel, .trend-card, .history-lookup { padding: 1rem; }
+  .student-callout { align-items: flex-start; padding: 0.85rem; }
+  .result-card { gap: 1rem; padding: 1rem; }
+  .breakdown-row { grid-template-columns: minmax(78px, 0.7fr) minmax(50px, 1fr) 55px; gap: 0.5rem; font-size: 0.78rem; }
+  .hbar-row { grid-template-columns: minmax(74px, 0.65fr) minmax(40px, 1fr) 28px; gap: 0.45rem; }
+  .at-risk-list li { grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; }
+  .at-risk-note { grid-column: 1 / -1; }
+  .results-panel-head { align-items: flex-start; padding: 0.85rem 1rem; }
+  .history-lookup .form-field { min-width: 100%; }
+  .history-lookup button, .upload-actions > * { width: 100%; }
+  .empty-state { padding: 1.25rem 0.85rem; }
+}
+
+@media (max-width: 360px) {
+  .menu-label { display: none; }
+  .mobile-navigation > summary { width: 44px; padding: 0.5rem; }
+  .score-circle { width: 112px; height: 112px; }
+  .score-value { font-size: 1.7rem; }
+}
 
 /* Misc */
 code {

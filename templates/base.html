@@ -13,7 +13,9 @@
         <span class="brand-mark">🎓</span>
         <span class="brand-text">YABATECH<span class="brand-sub">Performance Predictor</span></span>
       </a>
-      <nav>
+      <details class="mobile-navigation">
+        <summary aria-label="Open navigation menu"><span class="menu-icon" aria-hidden="true">☰</span><span class="menu-label">Menu</span></summary>
+        <nav aria-label="Main navigation">
         <a class="nav-item {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
           Batch Upload
@@ -30,7 +32,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><circle cx="12" cy="8.2" r="0.3" fill="currentColor" stroke-width="1.2"/></svg>
           Model Info
         </a>
-      </nav>
+        </nav>
+      </details>
       <div class="sidebar-footer">
         Demo model trained on synthetic data, not real Yabatech records — predictions are illustrative, not an official assessment.
       </div>
