@@ -39,6 +39,11 @@ def parse_form(form) -> dict:
 
 @app.route("/", methods=["GET"])
 def index():
+    return render_template("landing.html")
+
+
+@app.route("/batch", methods=["GET"])
+def batch_upload_page():
     return render_template("batch_upload.html")
 
 
