@@ -1012,6 +1012,58 @@ code {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
   animation: btn-sweep 1.2s infinite;
 }
+
+.photo-roster {
+  margin-top: 2rem;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.photo-roster h2 { margin: 0 0 .45rem; font-size: 1.2rem; color: var(--text); }
+.photo-roster .subtitle { margin: 0 0 1rem; max-width: 760px; }
+.photo-roster-heading { display: flex; justify-content: space-between; gap: 1rem; }
+.photo-roster .eyebrow { margin: 0 0 .3rem; color: var(--accent-strong); font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; }
+.photo-picker {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  padding: 1.3rem;
+  border: 1px dashed var(--accent-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.photo-picker:hover { border-color: var(--accent-strong); }
+.photo-progress { min-height: 1.4em; color: var(--accent-strong); font-size: .9rem; }
+.photo-review-label { display: block; margin: 1rem 0 .5rem; color: var(--text); font-size: .9rem; }
+.photo-review {
+  display: block;
+  width: 100%;
+  padding: .85rem;
+  resize: vertical;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: .84rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.photo-review:focus { outline: 2px solid var(--accent-border); border-color: var(--accent); }
+.photo-limit-note {
+  margin-top: 1rem;
+  padding: .9rem 1rem;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--text);
+}
+.photo-limit-note strong { display: block; margin-bottom: .35rem; color: var(--warning); }
+.photo-limit-note p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.55; }
+@media (max-width: 640px) {
+  .photo-roster { padding: 1rem; }
+  .photo-roster .upload-actions { align-items: stretch; }
+  .photo-roster .upload-actions button { width: 100%; }
+}
 @keyframes btn-sweep {
   to { left: 100%; }
 }

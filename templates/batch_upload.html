@@ -35,6 +35,33 @@
     </p>
   </form>
 
+  <section class="photo-roster" aria-labelledby="photo-roster-title">
+    <div class="photo-roster-heading">
+      <div>
+        <p class="eyebrow">Lecturer photo upload · current-risk screening</p>
+        <h2 id="photo-roster-title">Identify students who may be at risk now</h2>
+        <p class="subtitle">The purpose of this lecturer workflow is to highlight students who may need support based on marks already recorded—not to predict their final scores.</p>
+      </div>
+    </div>
+    <label class="photo-picker" for="photo-files">
+      <span class="dropzone-title">Choose or take sheet photos</span>
+      <span class="dropzone-sub" id="photo-filenames">JPG, PNG or WebP · multiple pages supported</span>
+      <input type="file" id="photo-files" accept="image/*" capture="environment" multiple hidden>
+    </label>
+    <div class="upload-actions">
+      <button type="button" class="btn-primary" id="photo-scan-btn" disabled>Read sheet photos</button>
+      <button type="button" class="btn-secondary" id="photo-analyze-btn" disabled>Estimate final scores (four components)</button>
+    </div>
+    <p class="photo-progress" id="photo-progress" aria-live="polite"></p>
+    <label class="photo-review-label" for="photo-csv">Review and correct the extracted CSV before continuing.</label>
+    <textarea id="photo-csv" class="photo-review" rows="10" spellcheck="false" placeholder="Extracted rows will appear here for review…"></textarea>
+    <div class="photo-limit-note" role="note">
+      <strong>What the analyzer currently supports</strong>
+      <p>Photo OCR creates an editable draft, but the existing analyzer still estimates final scores from four inputs: exam, test/CA, assignment and practical. It does not yet screen course-by-course marks or cumulative GPA directly for current risk. Check OCR carefully, and don’t treat its current predictions as a current-risk assessment for sheets like the examples.</p>
+    </div>
+    <p class="privacy-note">Images are processed locally in this browser and are not uploaded. OCR may misread names and marks, so verify the extracted draft before using it.</p>
+  </section>
+
   <div id="scanner" class="scanner" hidden aria-live="polite">
     <div class="scan-doc">
       <div class="scan-beam"></div>
@@ -62,6 +89,12 @@
   const statusEl = document.getElementById("scan-status");
   const resultsEl = document.getElementById("results");
   const exampleBtn = document.getElementById("example-btn");
+  const photoInput = document.getElementById("photo-files");
+  const photoScanBtn = document.getElementById("photo-scan-btn");
+  const photoAnalyzeBtn = document.getElementById("photo-analyze-btn");
+  const photoCsv = document.getElementById("photo-csv");
+  const photoProgress = document.getElementById("photo-progress");
+  const photoNames = document.getElementById("photo-filenames");
 
   const PHRASES = [
     "Reading rows…",
@@ -74,6 +107,82 @@
     const file = fileInput.files[0];
     filenameEl.textContent = file ? file.name : "No file selected";
     submitBtn.disabled = !file;
+  });
+
+  photoInput.addEventListener("change", () => {
+    const files = Array.from(photoInput.files || []);
+    photoNames.textContent = files.length ? files.map((f) => f.name).join(", ") : "JPG, PNG or WebP · multiple pages supported";
+    photoScanBtn.disabled = files.length === 0;
+  });
+
+  function csvCell(value) {
+    const s = String(value ?? "").trim();
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  photoScanBtn.addEventListener("click", async () => {
+    const files = Array.from(photoInput.files || []);
+    if (!files.length) return;
+    photoScanBtn.disabled = true;
+    photoAnalyzeBtn.disabled = true;
+    photoProgress.textContent = "Loading the browser OCR engine…";
+    try {
+      if (!window.Tesseract) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Could not load OCR. Check your internet connection and try again."));
+          document.head.appendChild(script);
+        });
+      }
+      const output = [];
+      for (let i = 0; i < files.length; i++) {
+        photoProgress.textContent = `Reading page ${i + 1} of ${files.length}…`;
+        const bitmap = await createImageBitmap(files[i]);
+        const cellGap = Math.max(14, bitmap.width * 0.014);
+        bitmap.close();
+        const result = await window.Tesseract.recognize(files[i], "eng", {
+          logger: (m) => {
+            if (m.status === "recognizing text" && m.progress != null) {
+              photoProgress.textContent = `Reading page ${i + 1} of ${files.length}: ${Math.round(m.progress * 100)}%`;
+            }
+          },
+          tessedit_pageseg_mode: "1",
+        });
+        const lines = (result.data.lines || []).map((line) => {
+          const words = (line.words || []).filter((word) => word.text && word.text.trim());
+          if (!words.length) return [];
+          // Preserve approximate cell gaps using the OCR word positions.
+          const cells = [];
+          let cell = words[0].text;
+          let right = words[0].bbox.x1;
+          for (const word of words.slice(1)) {
+            const gap = word.bbox.x0 - right;
+            if (gap > cellGap) { cells.push(cell); cell = word.text; }
+            else cell += " " + word.text;
+            right = word.bbox.x1;
+          }
+          cells.push(cell);
+          return cells;
+        }).filter((row) => row.length);
+        output.push(...lines);
+      }
+      const width = Math.max(1, ...output.map((row) => row.length));
+      photoCsv.value = output.map((row) => Array.from({ length: width }, (_, i) => csvCell(row[i] || "")).join(",")).join("\n");
+      photoAnalyzeBtn.disabled = false;
+      photoProgress.textContent = `Read ${output.length} lines. Review the extracted cells and correct the headers and marks before analysis.`;
+    } catch (err) {
+      photoProgress.textContent = err.message || "Photo reading failed. Try a brighter, sharper photo.";
+    } finally {
+      photoScanBtn.disabled = photoInput.files.length === 0;
+    }
+  });
+
+  photoCsv.addEventListener("input", () => { photoAnalyzeBtn.disabled = !photoCsv.value.trim(); });
+  photoAnalyzeBtn.addEventListener("click", () => {
+    const blob = new Blob([photoCsv.value], { type: "text/csv;charset=utf-8" });
+    submitFile(new File([blob], "photo_roster.csv", { type: "text/csv" }));
   });
 
   async function submitFile(file) {
