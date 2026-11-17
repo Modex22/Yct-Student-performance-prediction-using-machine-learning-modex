@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Factor Prediction Result — YABATECH Performance Predictor{% endblock %}
+{% block page_title %}Factor-Based Grade Prediction{% endblock %}
+{% block page_subtitle %}
+  <p class="subtitle">Predicted final academic grade based on student background, study habits, and engagement.</p>
+{% endblock %}
+
+{% block content %}
+<div class="disclaimer" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25);">
+  <strong style="color: var(--accent-strong); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+    <span>📊</span> General Student Dataset Reference
+  </strong>
+  <p style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text);">
+    Model trained on the general <strong>Student Performance Prediction Dataset</strong> hosted on Kaggle:
+    <a href="{{ result.dataset_url }}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-strong); text-decoration: underline; font-weight: 600;">
+      {{ result.dataset_url }}
+    </a>
+  </p>
+</div>
+
+<div class="result-card" style="margin-bottom: 1.75rem;">
+  <div class="score-circle">
+    <div class="score-circle-inner">
+      <span class="score-value" style="font-size: 2.6rem; letter-spacing: -0.02em;">{{ result.predicted_grade }}</span>
+      <span class="score-max">Grade</span>
+      <span class="score-mae" style="font-size: 0.76rem; color: var(--muted);">GPA ~{{ result.grade_gpa }}</span>
+    </div>
+  </div>
+  <div class="result-details">
+    <p>
+      <strong>Academic Standing:</strong>
+      <span class="badge {{ 'badge-good' if result.predicted_grade in ['AA', 'BA', 'BB'] else ('badge-average' if result.predicted_grade in ['CB', 'CC'] else 'badge-risk') }}">
+        {{ result.grade_title }}
+      </span>
+    </p>
+    <p>
+      <strong>Performance Status:</strong>
+      <span class="badge {{ 'badge-good' if result.predicted_grade in ['AA', 'BA', 'BB'] else ('badge-average' if result.predicted_grade in ['CB', 'CC'] else 'badge-risk') }}">
+        {{ result.status }}
+      </span>
+    </p>
+    <p>
+      <strong>Primary Habit Indicators:</strong>
+      <span class="muted">
+        Attendance: <strong>{{ result.inputs.Attendance }}</strong> &bull;
+        Study: <strong>{{ result.inputs.Weekly_Study_Hours }} hrs/wk</strong> &bull;
+        Projects: <strong>{{ result.inputs.Project_work }}</strong>
+      </span>
+    </p>
+  </div>
+</div>
+
+<div class="score-breakdown" style="margin-bottom: 1.75rem;">
+  <h2 style="font-size: 1.15rem; margin-bottom: 0.35rem;">Model Confidence & Grade Distribution</h2>
+  <p class="breakdown-note">Predicted probability across all grade categories according to the trained Random Forest model:</p>
+  
+  <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1rem;">
+    {% for grade_code, prob in result.probabilities.items() %}
+      <div class="breakdown-row" style="grid-template-columns: 70px 1fr 55px;">
+        <span class="breakdown-label" style="font-weight: {% if grade_code == result.predicted_grade %}700; color: var(--accent-strong){% else %}500{% endif %};">
+          {{ grade_code }} {% if grade_code == result.predicted_grade %}&#10003;{% endif %}
+        </span>
+        <div class="breakdown-track">
+          <div class="breakdown-fill" data-target-width="{{ prob }}" style="width: {{ prob }}%; background: {% if grade_code == result.predicted_grade %}var(--accent-gradient){% else %}var(--border-strong){% endif %};"></div>
+        </div>
+        <span class="breakdown-value" style="font-weight: {% if grade_code == result.predicted_grade %}700{% else %}400{% endif %};">{{ prob }}%</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="counsellor-note" style="margin-bottom: 1.75rem;">
+  <span class="counsellor-note-label">Personalized Factor Insights & Recommendations</span>
+  <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.75rem;">
+    {% for rec in result.recommendations %}
+      <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.65rem 0.85rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); border-left: 4px solid {% if rec.type == 'danger' %}var(--risk){% elif rec.type == 'warning' %}var(--warning){% elif rec.type == 'success' %}var(--accent){% else %}var(--muted){% endif %};">
+        <div style="flex: 1;">
+          <strong style="font-size: 0.88rem; display: block; color: var(--text); margin-bottom: 0.15rem;">{{ rec.category }}</strong>
+          <span style="font-size: 0.85rem; color: var(--muted); line-height: 1.45;">{{ rec.text }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 2rem; padding: 1.25rem;">
+  <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem;">Submitted Student Profile</h3>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; font-size: 0.85rem;">
+    <div><span class="muted">Age Group:</span> <strong>{{ result.inputs.Student_Age }}</strong></div>
+    <div><span class="muted">Gender:</span> <strong>{{ result.inputs.Sex }}</strong></div>
+    <div><span class="muted">High School:</span> <strong>{{ result.inputs.High_School_Type }}</strong></div>
+    <div><span class="muted">Scholarship:</span> <strong>{{ result.inputs.Scholarship }}</strong></div>
+    <div><span class="muted">Transportation:</span> <strong>{{ result.inputs.Transportation }}</strong></div>
+    <div><span class="muted">Additional Work:</span> <strong>{{ result.inputs.Additional_Work }}</strong></div>
+    <div><span class="muted">Sports Activity:</span> <strong>{{ result.inputs.Sports_activity }}</strong></div>
+    <div><span class="muted">Weekly Study:</span> <strong>{{ result.inputs.Weekly_Study_Hours }} hours</strong></div>
+    <div><span class="muted">Attendance:</span> <strong>{{ result.inputs.Attendance }}</strong></div>
+    <div><span class="muted">Reading:</span> <strong>{{ result.inputs.Reading }}</strong></div>
+    <div><span class="muted">Note Taking:</span> <strong>{{ result.inputs.Notes }}</strong></div>
+    <div><span class="muted">Listening in Class:</span> <strong>{{ result.inputs.Listening_in_Class }}</strong></div>
+    <div><span class="muted">Project Work:</span> <strong>{{ result.inputs.Project_work }}</strong></div>
+  </div>
+</div>
+
+<div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+  <a href="{{ url_for('factor_check') }}" class="btn-primary">
+    &larr; Try Another Profile
+  </a>
+  <a href="{{ url_for('quick_check') }}" class="btn-secondary">
+    Go to Assessment Score Check
+  </a>
+  <a href="{{ result.dataset_url }}" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="margin-left: auto;">
+    Dataset on Kaggle &nearr;
+  </a>
+</div>
+{% endblock %}

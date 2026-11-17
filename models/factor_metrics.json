@@ -1,0 +1,18 @@
+{
+  "dataset_name": "Student Performance Prediction Dataset (Kaggle)",
+  "dataset_url": "https://www.kaggle.com/datasets/prajwalkanade/student-performance-prediction-dataset",
+  "sample_count": 145,
+  "cv_accuracy_mean": 0.2552,
+  "cv_accuracy_std": 0.0352,
+  "train_accuracy": 0.8966,
+  "classes": [
+    "AA",
+    "BA",
+    "BB",
+    "CB",
+    "CC",
+    "DC",
+    "DD",
+    "Fail"
+  ]
+}

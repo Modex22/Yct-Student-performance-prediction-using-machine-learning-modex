@@ -99,5 +99,21 @@
     document.querySelectorAll(".trend-card svg").forEach(function (svg) {
       if (svg.querySelector(".trend-line")) animateTrendLine(svg);
     });
+
+    var menuToggle = document.getElementById("menuToggle");
+    var sidebarNav = document.getElementById("sidebarNav");
+    if (menuToggle && sidebarNav) {
+      menuToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var isOpen = sidebarNav.classList.toggle("is-open");
+        menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      });
+      document.addEventListener("click", function (e) {
+        if (!sidebarNav.contains(e.target) && !menuToggle.contains(e.target)) {
+          sidebarNav.classList.remove("is-open");
+          menuToggle.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
   });
 })();

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Factor-Based Predictor — YABATECH Performance Predictor{% endblock %}
+{% block page_title %}Predict grade by student factors{% endblock %}
+{% block page_subtitle %}
+  <p class="subtitle">
+    Evaluate student performance and predicted grade based on background, lifestyle, study habits,
+    and classroom engagement factors.
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="disclaimer" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25);">
+  <strong style="color: var(--accent-strong); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;">
+    <span>📊</span> General Student Dataset Reference
+  </strong>
+  <p style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text);">
+    This section is trained on the general <strong>Student Performance Prediction Dataset</strong> available on Kaggle:
+    <a href="https://www.kaggle.com/datasets/prajwalkanade/student-performance-prediction-dataset" target="_blank" rel="noopener noreferrer" style="color: var(--accent-strong); text-decoration: underline; font-weight: 600;">
+      https://www.kaggle.com/datasets/prajwalkanade/student-performance-prediction-dataset
+    </a>.
+    It assesses how demographic factors, weekly study hours, lecture attendance, and engagement habits impact final academic grades (AA through Fail).
+  </p>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem; padding: 1.1rem 1.3rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+    <div>
+      <span style="font-size: 0.82rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; color: var(--faint);">Quick Fill Presets</span>
+      <p style="margin: 0.15rem 0 0; font-size: 0.88rem; color: var(--muted);">Select a student profile to test the predictor instantly:</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <button type="button" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem;" onclick="loadPreset('high')">✨ High Achiever</button>
+      <button type="button" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem;" onclick="loadPreset('balanced')">⚖️ Balanced Student</button>
+      <button type="button" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem;" onclick="loadPreset('atrisk')">⚠️ At-Risk Student</button>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('factor_check_predict') }}" class="predict-form" id="factorForm">
+  <div style="margin-bottom: 1.5rem;">
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;">
+      1. Demographics & Campus Life
+    </h3>
+    <div class="form-grid">
+      {% for field in fields if field.group == "Demographics & Background" %}
+        <div class="form-field">
+          <label for="{{ field.name }}">{{ field.label }}</label>
+          {% if field.help %}<span class="field-help">{{ field.help }}</span>{% endif %}
+          <select id="{{ field.name }}" name="{{ field.name }}" required>
+            {% for opt in field.options %}
+              <option value="{{ opt }}" {% if opt == field.default %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1.5rem;">
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;">
+      2. Lifestyle & Commitments
+    </h3>
+    <div class="form-grid">
+      {% for field in fields if field.group == "Lifestyle & Commitments" %}
+        <div class="form-field">
+          <label for="{{ field.name }}">{{ field.label }}</label>
+          {% if field.help %}<span class="field-help">{{ field.help }}</span>{% endif %}
+          <select id="{{ field.name }}" name="{{ field.name }}" required>
+            {% for opt in field.options %}
+              <option value="{{ opt }}" {% if opt == field.default %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1.75rem;">
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;">
+      3. Study Habits & Classroom Engagement
+    </h3>
+    <div class="form-grid">
+      {% for field in fields if field.group == "Study Habits & Engagement" %}
+        <div class="form-field">
+          <label for="{{ field.name }}">{{ field.label }}</label>
+          {% if field.help %}<span class="field-help">{{ field.help }}</span>{% endif %}
+          <select id="{{ field.name }}" name="{{ field.name }}" required>
+            {% for opt in field.options %}
+              <option value="{{ opt }}" {% if opt == field.default %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+    <button type="submit" class="btn-primary" id="predictBtn" style="min-width: 220px;">
+      Predict Academic Grade <span aria-hidden="true">→</span>
+    </button>
+    <a href="{{ url_for('quick_check') }}" class="btn-secondary">
+      Switch to CA Score-based Predictor
+    </a>
+  </div>
+</form>
+
+<div id="evalOverlay" class="evaluating-overlay" aria-hidden="true">
+  <div class="evaluating-card">
+    <div class="radar-graphic">
+      <div class="radar-ring"></div>
+      <div class="radar-pulse"></div>
+      <div class="radar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+          <path d="M2 17l10 5 10-5"></path>
+          <path d="M2 12l10 5 10-5"></path>
+        </svg>
+      </div>
+    </div>
+    <div class="eval-title">Predicting Academic Grade</div>
+    <div id="evalStatus" class="eval-status">Reading 13 student lifestyle &amp; habit factors...</div>
+    <div class="eval-progress-track">
+      <div id="evalProgressBar" class="eval-progress-bar"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setVal(name, val) {
+  const el = document.getElementById(name);
+  if (el) el.value = val;
+}
+
+const form = document.getElementById('factorForm');
+const btn = document.getElementById('predictBtn');
+const overlay = document.getElementById('evalOverlay');
+const statusEl = document.getElementById('evalStatus');
+const bar = document.getElementById('evalProgressBar');
+
+if (form) {
+  form.addEventListener('submit', function (e) {
+    if (!form.checkValidity()) return;
+    e.preventDefault();
+
+    btn.classList.add('btn-evaluating');
+    btn.innerHTML = '<span>Analyzing Factors &amp; Model...</span>';
+    overlay.classList.add('active');
+
+    bar.style.width = '20%';
+    statusEl.textContent = 'Reading student background & study habits...';
+
+    setTimeout(function () {
+      bar.style.width = '55%';
+      statusEl.textContent = 'Evaluating lecture attendance & weekly revision metrics...';
+    }, 450);
+
+    setTimeout(function () {
+      bar.style.width = '85%';
+      statusEl.textContent = 'Executing Random Forest classification pipeline...';
+    }, 950);
+
+    setTimeout(function () {
+      bar.style.width = '100%';
+      statusEl.textContent = 'Finalizing predicted grade & recommendations...';
+    }, 1400);
+
+    setTimeout(function () {
+      form.submit();
+    }, 1750);
+  });
+}
+
+function loadPreset(type) {
+  if (type === 'high') {
+    setVal('Student_Age', '19-22');
+    setVal('Sex', 'Female');
+    setVal('High_School_Type', 'State');
+    setVal('Scholarship', '75%');
+    setVal('Transportation', 'Private');
+    setVal('Additional_Work', 'No');
+    setVal('Sports_activity', 'Yes');
+    setVal('Weekly_Study_Hours', '12');
+    setVal('Attendance', 'Always');
+    setVal('Reading', 'Yes');
+    setVal('Notes', 'Yes');
+    setVal('Listening_in_Class', 'Yes');
+    setVal('Project_work', 'Yes');
+  } else if (type === 'balanced') {
+    setVal('Student_Age', '18');
+    setVal('Sex', 'Male');
+    setVal('High_School_Type', 'State');
+    setVal('Scholarship', '50%');
+    setVal('Transportation', 'Bus');
+    setVal('Additional_Work', 'Yes');
+    setVal('Sports_activity', 'Yes');
+    setVal('Weekly_Study_Hours', '2');
+    setVal('Attendance', 'Always');
+    setVal('Reading', 'Yes');
+    setVal('Notes', 'Yes');
+    setVal('Listening_in_Class', 'Yes');
+    setVal('Project_work', 'Yes');
+  } else if (type === 'atrisk') {
+    setVal('Student_Age', '19-22');
+    setVal('Sex', 'Male');
+    setVal('High_School_Type', 'Private');
+    setVal('Scholarship', 'None');
+    setVal('Transportation', 'Bus');
+    setVal('Additional_Work', 'Yes');
+    setVal('Sports_activity', 'No');
+    setVal('Weekly_Study_Hours', '0');
+    setVal('Attendance', 'Never');
+    setVal('Reading', 'No');
+    setVal('Notes', 'No');
+    setVal('Listening_in_Class', 'No');
+    setVal('Project_work', 'No');
+  }
+}
+</script>
+{% endblock %}

@@ -10,21 +10,19 @@
     <p>Enter your course scores to get an illustrative performance estimate. See how your marks combine and use the result to guide your next study goals.</p>
     <div class="landing-actions">
       <a class="btn-primary" href="{{ url_for('quick_check') }}">Check my score <span aria-hidden="true">→</span></a>
-      <a class="btn-secondary" href="{{ url_for('batch_upload_page') }}">Lecturer: upload a class roster</a>
+      <a class="btn-primary" href="{{ url_for('factor_check') }}" style="background: var(--surface-raised); border: 1px solid var(--accent-border); color: var(--accent-strong);">Predict by Factors <span aria-hidden="true">→</span></a>
+      <a class="btn-secondary" href="{{ url_for('batch_upload_page') }}">Lecturer: upload class roster</a>
     </div>
     <p class="landing-note">Demo predictions are illustrative and are not an official YABATECH assessment.</p>
   </div>
   <div class="landing-visual" aria-hidden="true">
-    <div class="landing-orbit landing-orbit-one"></div>
-    <div class="landing-orbit landing-orbit-two"></div>
-    <div class="landing-score-card">
-      <span class="landing-card-label">YOUR PROGRESS</span>
-      <strong>One score<br>at a time.</strong>
-      <div class="landing-score-bars"><i></i><i></i><i></i><i></i></div>
-      <span class="landing-card-caption">Test • Assignment • Practical • Exam</span>
+    <div class="landing-floating-badge">
+      <div class="badge-icon">🎓</div>
+      <div>
+        <strong>YABATECH Student Portal</strong>
+        <span>Excellence Through Prediction</span>
+      </div>
     </div>
-    <span class="landing-float landing-float-top">01 &nbsp; Score estimate</span>
-    <span class="landing-float landing-float-bottom">02 &nbsp; Study planning</span>
   </div>
 </section>
 
@@ -46,6 +44,12 @@
     <h3>Support a whole class</h3>
     <p>Lecturers can upload a spreadsheet and view a class-level performance summary.</p>
     <a href="{{ url_for('batch_upload_page') }}">Open class upload <span aria-hidden="true">→</span></a>
+  </article>
+  <article class="landing-feature">
+    <span class="feature-number">04</span>
+    <h3>Predict by student factors</h3>
+    <p>Assess performance based on study hours, attendance, background and habits using the general student dataset on Kaggle.</p>
+    <a href="{{ url_for('factor_check') }}">Open factor predictor <span aria-hidden="true">→</span></a>
   </article>
 </section>
 {% endblock %}

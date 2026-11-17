@@ -7,6 +7,12 @@ from flask import Flask, Response, render_template, request, send_from_directory
 
 from src.batch import BatchError, build_template_csv, parse_upload, run_batch, validate_and_prepare
 from src.config import FEATURE_COLUMNS, FIGURES_DIR, METRICS_PATH
+from src.factor_model import (
+    FACTOR_FIELDS,
+    FACTOR_METRICS_PATH,
+    KAGGLE_DATASET_URL,
+    predict_factor_performance,
+)
 from src.history import WrongPin, build_trend_chart, delete_history, get_history, save_entry
 from src.predict import predict_performance
 
@@ -167,15 +173,38 @@ def history_delete():
         return render_template("history_lookup.html", error="Incorrect PIN — nothing was deleted.")
 
 
+@app.route("/factors", methods=["GET"])
+def factor_check():
+    return render_template("factor_check.html", fields=FACTOR_FIELDS)
+
+
+@app.route("/factors/predict", methods=["POST"])
+def factor_check_predict():
+    inputs = {k: request.form.get(k) for k in request.form}
+    result = predict_factor_performance(inputs)
+    return render_template("factor_result.html", result=result)
+
+
 @app.route("/about", methods=["GET"])
 def about():
     metrics = {}
+    factor_metrics = {}
     try:
         with open(METRICS_PATH) as f:
             metrics = json.load(f)
     except FileNotFoundError:
         pass
-    return render_template("about.html", metrics=metrics)
+    try:
+        with open(FACTOR_METRICS_PATH) as f:
+            factor_metrics = json.load(f)
+    except FileNotFoundError:
+        pass
+    return render_template(
+        "about.html",
+        metrics=metrics,
+        factor_metrics=factor_metrics,
+        kaggle_url=KAGGLE_DATASET_URL,
+    )
 
 
 @app.route("/figures/<path:filename>", methods=["GET"])

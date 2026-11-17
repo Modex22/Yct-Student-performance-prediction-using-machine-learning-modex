@@ -60,4 +60,41 @@
   <h2>Actual vs. predicted</h2>
   <img class="figure" src="{{ url_for('figures', filename='actual_vs_predicted.png') }}"
        alt="Actual vs predicted scatter plot" onerror="this.style.display='none'">
+
+  <hr style="margin: 2.5rem 0; border: none; border-top: 1px solid var(--border);">
+
+  <h2>General Student Performance Dataset Model (Kaggle)</h2>
+  <div class="disclaimer" style="background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25); margin-bottom: 1.25rem;">
+    <strong>Source &amp; Reference:</strong> This factor prediction model is trained on the general
+    <a href="{{ kaggle_url or 'https://www.kaggle.com/datasets/prajwalkanade/student-performance-prediction-dataset' }}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-strong); font-weight: 600; text-decoration: underline;">
+      Student Performance Prediction Dataset on Kaggle
+    </a>
+    created by Prajwal Kanade. It represents a general cohort of students evaluating the relationship between
+    demographic attributes, weekly study hours, attendance consistency, note-taking, and overall final academic grades (AA through Fail).
+  </div>
+
+  {% if factor_metrics %}
+    <div class="table-wrap">
+      <table class="metrics-table">
+        <thead>
+          <tr>
+            <th>Model Type</th>
+            <th>Sample Count</th>
+            <th>5-Fold CV Accuracy</th>
+            <th>Train Accuracy</th>
+            <th>Classes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td>Random Forest Classifier (Balanced)</td>
+            <td>{{ factor_metrics.sample_count }}</td>
+            <td>{{ "%.1f"|format(factor_metrics.cv_accuracy_mean * 100) }}% (&plusmn;{{ "%.1f"|format(factor_metrics.cv_accuracy_std * 100) }}%)</td>
+            <td>{{ "%.1f"|format(factor_metrics.train_accuracy * 100) }}%</td>
+            <td>{{ factor_metrics.classes | join(', ') }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
 {% endblock %}
