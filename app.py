@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import json
+import hmac
+import os
+import csv
 
-from flask import Flask, Response, render_template, request, send_from_directory
+from flask import Flask, Response, redirect, render_template, request, send_from_directory, session, url_for
 
 from src.batch import BatchError, build_template_csv, parse_upload, run_batch, validate_and_prepare
 from src.config import FEATURE_COLUMNS, FIGURES_DIR, METRICS_PATH
@@ -14,9 +17,11 @@ from src.factor_model import (
     predict_factor_performance,
 )
 from src.history import WrongPin, build_trend_chart, delete_history, get_history, save_entry
+from src.history import delete_history_as_admin, get_admin_overview
 from src.predict import predict_performance
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-change-this-secret")
 
 FORM_FIELDS = [
     {"name": "exam_score", "label": "Exam score", "type": "number", "min": 0, "max": 60, "default": 36,
@@ -45,7 +50,58 @@ def parse_form(form) -> dict:
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("landing.html")
+    dataset_overview = {
+        "total_students": 0,
+        "graduate_count": 0,
+        "dropout_count": 0,
+        "graduate_percent": 0,
+        "dropout_percent": 0,
+        "features": [],
+    }
+
+    kaggle_path = os.path.join(os.path.dirname(__file__), "data", "kaggle_student_performance.csv")
+    try:
+        with open(kaggle_path, newline="", encoding="utf-8") as csv_file:
+            rows = list(csv.DictReader(csv_file))
+
+        graduate_grades = {"AA", "BA", "BB", "CC", "CB"}
+        graduate_count = sum(row["Grade"] in graduate_grades for row in rows)
+        dropout_count = len(rows) - graduate_count
+        total = len(rows)
+
+        feature_fields = [
+            ("High school type", "High_School_Type"),
+            ("Scholarship", "Scholarship"),
+            ("Additional work", "Additional_Work"),
+            ("Sports activity", "Sports_activity"),
+            ("Attendance", "Attendance"),
+            ("Study hours", "Weekly_Study_Hours"),
+            ("Reading", "Reading"),
+        ]
+        features = []
+        for label, field in feature_fields:
+            counts = {}
+            for row in rows:
+                value = row[field].strip()
+                counts[value] = counts.get(value, 0) + 1
+            features.append({
+                "label": label,
+                "count": sum(counts.values()),
+                "categories": sorted(counts.items(), key=lambda item: item[1], reverse=True)[:3],
+            })
+
+        dataset_overview = {
+            "total_students": total,
+            "graduate_count": graduate_count,
+            "dropout_count": dropout_count,
+            "graduate_percent": round((graduate_count / total) * 100, 1) if total else 0,
+            "dropout_percent": round((dropout_count / total) * 100, 1) if total else 0,
+            "features": features,
+        }
+    except (FileNotFoundError, KeyError, OSError):
+        pass
+
+    return render_template("landing.html", dataset_overview=dataset_overview)
 
 
 @app.route("/batch", methods=["GET"])
@@ -210,6 +266,66 @@ def about():
 @app.route("/figures/<path:filename>", methods=["GET"])
 def figures(filename):
     return send_from_directory(FIGURES_DIR, filename)
+
+
+def _admin_logged_in() -> bool:
+    return session.get("admin_logged_in") is True
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if _admin_logged_in():
+        return redirect(url_for("admin_dashboard"))
+
+    error = None
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+        expected_username = os.environ.get("ADMIN_USERNAME", "admin")
+        expected_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+        if (
+            hmac.compare_digest(username, expected_username)
+            and hmac.compare_digest(password, expected_password)
+        ):
+            session["admin_logged_in"] = True
+            session["admin_username"] = username
+            return redirect(url_for("admin_dashboard"))
+        error = "Incorrect admin username or password."
+
+    return render_template("admin_login.html", error=error)
+
+
+@app.route("/admin", methods=["GET"])
+def admin_dashboard():
+    if not _admin_logged_in():
+        return redirect(url_for("admin_login"))
+
+    search = (request.args.get("q") or "").strip()
+    overview = get_admin_overview(search)
+    return render_template(
+        "admin_dashboard.html",
+        overview=overview,
+        search=search,
+        admin_username=session.get("admin_username", "Admin"),
+    )
+
+
+@app.route("/admin/student/delete", methods=["POST"])
+def admin_delete_student():
+    if not _admin_logged_in():
+        return redirect(url_for("admin_login"))
+
+    matric_no = (request.form.get("matric_no") or "").strip()
+    if matric_no:
+        delete_history_as_admin(matric_no)
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/logout", methods=["POST"])
+def admin_logout():
+    session.pop("admin_logged_in", None)
+    session.pop("admin_username", None)
+    return redirect(url_for("admin_login"))
 
 
 if __name__ == "__main__":

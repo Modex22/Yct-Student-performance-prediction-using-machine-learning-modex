@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Admin dashboard | YABATECH{% endblock %}
+{% block page_title %}Admin dashboard{% endblock %}
+{% block page_subtitle %}<p class="subtitle">Saved student history and prediction overview.</p>{% endblock %}
+{% block topbar_extra %}
+<div class="admin-top-actions">
+  <span class="muted">{{ admin_username }}</span>
+  <form method="post" action="{{ url_for('admin_logout') }}">
+    <button type="submit" class="btn-secondary">Logout</button>
+  </form>
+</div>
+{% endblock %}
+{% block content %}
+<div class="admin-toolbar">
+  <form method="get" action="{{ url_for('admin_dashboard') }}" class="admin-search">
+    <input type="search" name="q" value="{{ search }}" placeholder="Search matric number..." aria-label="Search matric number">
+    <button type="submit" class="btn-primary">Search</button>
+  </form>
+</div>
+
+<section class="stat-tiles" aria-label="Admin summary">
+  <article class="stat-tile">
+    <span class="stat-label">Students</span>
+    <strong class="stat-value">{{ overview.student_count }}</strong>
+  </article>
+  <article class="stat-tile">
+    <span class="stat-label">Saved predictions</span>
+    <strong class="stat-value">{{ overview.entry_count }}</strong>
+  </article>
+  <article class="stat-tile">
+    <span class="stat-label">Average score</span>
+    <strong class="stat-value">{{ overview.average_score }}</strong>
+  </article>
+  <article class="stat-tile">
+    <span class="stat-label">Pass rate</span>
+    <strong class="stat-value">{{ overview.pass_rate }}%</strong>
+  </article>
+</section>
+
+<section class="admin-section">
+  <div class="dashboard-header">
+    <h2>Students</h2>
+  </div>
+  {% if overview.students %}
+  <div class="table-wrap">
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th>Matric number</th>
+          <th>Entries</th>
+          <th>Average</th>
+          <th>Latest</th>
+          <th>Failures</th>
+          <th>Last saved</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in overview.students %}
+        <tr>
+          <td><strong>{{ student.matric_no }}</strong></td>
+          <td>{{ student.entry_count }}</td>
+          <td>{{ "%.1f"|format(student.average_score) }}</td>
+          <td>{{ "%.1f"|format(student.latest_score) }}</td>
+          <td>{{ student.fail_count }}</td>
+          <td>{{ student.latest_saved[:10] }}</td>
+          <td>
+            <form method="post" action="{{ url_for('admin_delete_student') }}"
+                  onsubmit="return confirm('Delete all saved data for {{ student.matric_no }}?');">
+              <input type="hidden" name="matric_no" value="{{ student.matric_no }}">
+              <button type="submit" class="btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No saved student history{% if search %} matches "{{ search }}"{% endif %}.</div>
+  {% endif %}
+</section>
+
+<section class="admin-section">
+  <div class="dashboard-header">
+    <h2>Recent predictions</h2>
+  </div>
+  {% if overview.recent_entries %}
+  <div class="table-wrap">
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Matric number</th>
+          <th>Predicted</th>
+          <th>Classification</th>
+          <th>Pass / Fail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in overview.recent_entries %}
+        <tr>
+          <td>{{ entry.saved_at[:10] }}</td>
+          <td>{{ entry.matric_no }}</td>
+          <td><strong>{{ "%.1f"|format(entry.predicted_score) }}</strong></td>
+          <td>{{ entry.classification }}</td>
+          <td>{{ entry.pass_fail }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No recent predictions available.</div>
+  {% endif %}
+</section>
+{% endblock %}

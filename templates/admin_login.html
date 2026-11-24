@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Admin login | YABATECH{% endblock %}
+{% block page_title %}Administrator access{% endblock %}
+{% block page_subtitle %}<p class="subtitle">Sign in to manage saved student predictions.</p>{% endblock %}
+{% block content %}
+<section class="admin-login-card">
+  <div>
+    <span class="landing-eyebrow">RESTRICTED AREA</span>
+    <h2>Admin sign in</h2>
+    <p class="muted">Use the configured administrator credentials.</p>
+  </div>
+  <form method="post" action="{{ url_for('admin_login') }}" class="admin-login-form">
+    {% if error %}
+    <div class="batch-error">{{ error }}</div>
+    {% endif %}
+    <div class="form-field">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+    </div>
+    <div class="form-field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn-primary">Sign in</button>
+  </form>
+</section>
+{% endblock %}

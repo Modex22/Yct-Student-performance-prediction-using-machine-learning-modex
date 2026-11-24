@@ -161,6 +161,22 @@ or download the CSV template and fill in a real class list. `/quick-check`
 lets one student check their own score, and `/about` has model metrics and
 charts.
 
+## Admin section
+
+Open `/admin` to view saved student history, search matric numbers, review
+recent predictions, and delete a student's saved history.
+
+Set production credentials with environment variables before starting the
+app:
+
+```bash
+ADMIN_USERNAME=your-admin-name
+ADMIN_PASSWORD=your-strong-password
+FLASK_SECRET_KEY=your-long-random-secret
+```
+
+For local preview only, the default credentials are `admin` / `admin123`.
+
 ## Deploying it publicly
 
 **Not Vercel** — this app's dependencies (numpy + pandas + scipy + scikit-learn)

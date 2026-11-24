@@ -247,3 +247,75 @@ def delete_history(matric_no: str, pin: str) -> int:
         cursor = conn.execute("DELETE FROM history WHERE matric_no = ?", (matric_no,))
         conn.execute("DELETE FROM history_access WHERE matric_no = ?", (matric_no,))
         return cursor.rowcount
+
+
+def get_admin_overview(search: str = "") -> dict[str, Any]:
+    """Aggregate saved-history data for the protected admin dashboard."""
+    search = search.strip()
+    with _connect() as conn:
+        if search:
+            where = "WHERE matric_no LIKE ?"
+            params = (f"%{search}%",)
+        else:
+            where = ""
+            params = ()
+
+        totals = conn.execute(
+            """
+            SELECT COUNT(*) AS entry_count,
+                   COUNT(DISTINCT matric_no) AS student_count,
+                   COALESCE(AVG(predicted_score), 0) AS average_score,
+                   COALESCE(SUM(CASE WHEN pass_fail = 'Pass' THEN 1 ELSE 0 END), 0) AS pass_count,
+                   COALESCE(SUM(CASE WHEN pass_fail = 'Fail' THEN 1 ELSE 0 END), 0) AS fail_count
+            FROM history
+            """
+        ).fetchone()
+
+        students = conn.execute(
+            f"""
+            SELECT matric_no,
+                   COUNT(*) AS entry_count,
+                   AVG(predicted_score) AS average_score,
+                   MAX(predicted_score) AS latest_score,
+                   SUM(CASE WHEN pass_fail = 'Fail' THEN 1 ELSE 0 END) AS fail_count,
+                   MAX(saved_at) AS latest_saved
+            FROM history
+            {where}
+            GROUP BY matric_no
+            ORDER BY latest_saved DESC
+            """,
+            params,
+        ).fetchall()
+
+        recent_entries = conn.execute(
+            f"""
+            SELECT * FROM history
+            {where}
+            ORDER BY saved_at DESC
+            LIMIT 50
+            """,
+            params,
+        ).fetchall()
+
+    entry_count = totals["entry_count"]
+    pass_rate = round((totals["pass_count"] / entry_count) * 100, 1) if entry_count else 0.0
+    return {
+        "student_count": totals["student_count"],
+        "entry_count": entry_count,
+        "average_score": round(totals["average_score"], 1),
+        "pass_rate": pass_rate,
+        "fail_count": totals["fail_count"],
+        "students": [dict(row) for row in students],
+        "recent_entries": [dict(row) for row in recent_entries],
+    }
+
+
+def delete_history_as_admin(matric_no: str) -> int:
+    """Remove all student history records and the PIN as an admin action."""
+    matric_no = matric_no.strip()
+    if not matric_no:
+        return 0
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM history WHERE matric_no = ?", (matric_no,))
+        conn.execute("DELETE FROM history_access WHERE matric_no = ?", (matric_no,))
+        return cursor.rowcount

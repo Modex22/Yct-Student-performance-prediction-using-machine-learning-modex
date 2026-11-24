@@ -3,19 +3,99 @@
 {% block page_title %}About the model{% endblock %}
 {% block page_subtitle %}
   <p class="subtitle">
-    Several regression models were trained on a synthetic student dataset (2,000 records) and
-    compared with 5-fold cross-validation; the best performer was kept as the production model.
-    A separate classifier predicts pass/fail risk directly.
+    Project information, methodology, model performance, and technical documentation.
   </p>
 {% endblock %}
 {% block content %}
-  <div class="disclaimer">
-    <strong>Not yet trained on real Yabatech data.</strong> This is a demo built for Yaba College
-    of Technology's context (ND/HND classification, department &amp; level fields on the roster
-    upload) but the model itself learned from synthetic records, not actual student history.
-    Feed it a real, anonymized results spreadsheet and it can be retrained to be genuinely
-    Yabatech-specific.
-  </div>
+  <section class="about-banner">
+    <div class="about-banner-icon" aria-hidden="true">i</div>
+    <div>
+      <h2>About This System</h2>
+      <p>Project Information and Documentation</p>
+    </div>
+  </section>
+
+  <section class="about-section">
+    <h2>Project Overview</h2>
+    <div class="about-overview-grid">
+      <dl class="about-details">
+        <div>
+          <dt>Title</dt>
+          <dd>Student Performance Prediction System Using Machine Learning</dd>
+        </div>
+        <div>
+          <dt>Institution</dt>
+          <dd>Yaba College of Technology, Yaba, Lagos, Nigeria</dd>
+        </div>
+        <div>
+          <dt>Department</dt>
+          <dd>Computer Science</dd>
+        </div>
+        <div>
+          <dt>Academic Session</dt>
+          <dd>2024/2025</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="about-two-column">
+    <article class="about-card">
+      <span class="about-card-kicker">Objective</span>
+      <h2>Purpose</h2>
+      <p>
+        This system predicts a student's likely final score and identifies students
+        who may be at risk. It supports academic planning and early intervention
+        through continuous-assessment and factor-based predictions.
+      </p>
+      <ul>
+        <li>Estimate academic performance from assessment scores</li>
+        <li>Identify pass/fail and at-risk outcomes</li>
+        <li>Support lecturers with class-level roster analysis</li>
+        <li>Provide optional personal performance history</li>
+      </ul>
+    </article>
+
+    <article class="about-card">
+      <span class="about-card-kicker">Implementation</span>
+      <h2>Technology Stack</h2>
+      <ul class="technology-list">
+        <li><strong>Programming language:</strong> Python 3</li>
+        <li><strong>Machine learning:</strong> Scikit-learn</li>
+        <li><strong>Web framework:</strong> Flask</li>
+        <li><strong>Data processing:</strong> Pandas and NumPy</li>
+        <li><strong>Visualization:</strong> Matplotlib and server-rendered charts</li>
+        <li><strong>Persistence:</strong> SQLite</li>
+      </ul>
+    </article>
+  </section>
+
+  <section class="about-section about-method">
+    <span class="about-card-kicker">Process</span>
+    <h2>Prediction Methodology</h2>
+    <div class="about-method-grid">
+      <article>
+        <span>01</span>
+        <h3>Prepare data</h3>
+        <p>Assessment values are validated and standardized for model input.</p>
+      </article>
+      <article>
+        <span>02</span>
+        <h3>Train models</h3>
+        <p>Regression and classification models are trained and cross-validated.</p>
+      </article>
+      <article>
+        <span>03</span>
+        <h3>Generate prediction</h3>
+        <p>The system estimates a score, grade band, and pass/fail outcome.</p>
+      </article>
+      <article>
+        <span>04</span>
+        <h3>Support decisions</h3>
+        <p>Results provide recommendations and at-risk guidance for academic follow-up.</p>
+      </article>
+    </div>
+  </section>
 
   {% if metrics %}
     <h2>Best regressor: {{ metrics.best_regressor }}</h2>
