@@ -97,6 +97,20 @@
     </div>
   </section>
 
+  <section class="about-section">
+    <h2>Next-semester forecast</h2>
+    <p>
+      The overall-average forecast was trained on 132 matched students from the
+      supplied semester workbooks. It uses only observed first-semester marks;
+      estimated marks were excluded. Repeated 5-fold cross-validation produced
+      an average MAE of 3.93 points and R² of 0.397. A separate 80/20 holdout
+      produced an MAE of 3.95 points and R² of 0.584. These are internal results
+      from one cohort, not independent validation; the second-semester workbook
+      does not provide a row-level score-source flag, so treat forecasts as
+      planning estimates rather than guaranteed outcomes.
+    </p>
+  </section>
+
   {% if metrics %}
     <h2>Best regressor: {{ metrics.best_regressor }}</h2>
     <div class="table-wrap">
@@ -124,11 +138,10 @@
     <p class="muted">Trained on {{ metrics.n_train }} students, tested on {{ metrics.n_test }}.</p>
 
     <h2>Classification bands</h2>
-    <p>Predicted scores are mapped to Fail / Pass / Lower Credit / Upper Credit / Distinction —
-       the Nigerian-polytechnic convention — using illustrative cutoffs (45 / 50 / 60 / 70) modelled
-       loosely on common NBTE banding. These have <strong>not</strong> been confirmed against
-       Yabatech's official grading policy; edit <code>CLASSIFICATION_BINS</code> in
-       <code>src/config.py</code> once you know the real cutoffs.</p>
+    <p>Predicted scores are mapped to Fail / Pass / Lower Credit / Upper Credit / Distinction
+       using YABATECH's confirmed grading cutoffs: <strong>45</strong> for Pass,
+       <strong>50</strong> for Lower Credit, <strong>60</strong> for Upper Credit,
+       and <strong>70</strong> for Distinction.</p>
   {% else %}
     <p>No trained model metrics found yet — run <code>python -m src.train_model</code>.</p>
   {% endif %}

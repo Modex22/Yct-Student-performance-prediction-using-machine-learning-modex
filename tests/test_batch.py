@@ -1,4 +1,15 @@
-from src.batch import BatchError, build_template_csv, parse_upload, run_batch, validate_and_prepare
+from src.batch import (
+    BatchError,
+    build_template_csv,
+    is_course_roster,
+    is_next_semester_forecast,
+    parse_upload,
+    run_batch,
+    run_course_batch,
+    run_next_semester_batch,
+    validate_and_prepare,
+)
+import pandas as pd
 from src.predict import build_counsellor_note
 
 
@@ -67,3 +78,65 @@ def test_counsellor_note_mentions_the_driving_factor_for_at_risk_students():
 def test_counsellor_note_is_positive_for_excellent_category():
     note = build_counsellor_note({}, "Excellent")
     assert "outstanding" in note.lower()
+
+
+def test_course_final_scores_are_processed_directly():
+    df = pd.DataFrame([
+        {"student_id": "STU999", "course_code": "COM 411", "estimated_score": 70},
+        {"student_id": "STU999", "course_code": "COM 412", "estimated_score": 50},
+    ])
+    df.columns = [column.lower().replace(" ", "_") for column in df.columns]
+    df, identity_map, missing = validate_and_prepare(df)
+
+    assert is_course_roster(df)
+    assert missing == []
+    outcome = run_course_batch(df, identity_map)
+
+    assert outcome["mode"] == "course"
+    assert outcome["summary"]["n_students"] == 1
+    assert outcome["results"][0]["average_score"] == 60
+    assert outcome["results"][0]["classification"] == "Upper Credit"
+    assert len(outcome["results"][0]["courses"]) == 2
+
+
+def test_course_summary_needs_only_present_final_score_columns():
+    df = pd.DataFrame([{
+        "student_id": "STU100",
+        "com_411_score": 75,
+        "com_412_score": 55,
+    }])
+    df, identity_map, missing = validate_and_prepare(df)
+    outcome = run_course_batch(df, identity_map)
+
+    assert missing == []
+    assert outcome["summary"]["n_students"] == 1
+    assert outcome["results"][0]["average_score"] == 65
+    assert len(outcome["results"][0]["courses"]) == 2
+
+
+def test_scanned_marks_get_ordered_student_codes_and_next_semester_forecasts():
+    df = pd.DataFrame([
+        {
+            "forecast_next_semester": "yes",
+            "student_id": "",
+            "course_01_score": 50,
+            "course_02_score": 70,
+        },
+        {
+            "forecast_next_semester": "yes",
+            "student_id": "",
+            "course_01_score": 80,
+            "course_02_score": 90,
+        },
+    ])
+
+    assert is_next_semester_forecast(df)
+    outcome = run_next_semester_batch(df)
+
+    assert [row["student_id"] for row in outcome["results"]] == ["SST001", "SST002"]
+    assert outcome["results"][0]["current_average"] == 60
+    assert outcome["results"][0]["forecast_score"] == 55.4
+    assert outcome["results"][0]["score_mae"] == 4.0
+    assert "decline next semester" in outcome["results"][0]["remark"]
+    assert "Lower Credit" in outcome["results"][0]["remark"]
+    assert outcome["summary"]["n_students"] == 2

@@ -13,11 +13,12 @@
       <a class="btn-primary" href="{{ url_for('factor_check') }}" style="background: var(--surface-raised); border: 1px solid var(--accent-border); color: var(--accent-strong);">Predict by Factors <span aria-hidden="true">→</span></a>
       <a class="btn-secondary" href="{{ url_for('batch_upload_page') }}">Lecturer: upload class roster</a>
     </div>
-    <p class="landing-note">Demo predictions are illustrative and are not an official YABATECH assessment.</p>
   </div>
   <div class="landing-visual" aria-hidden="true">
     <div class="landing-floating-badge">
-      <div class="badge-icon">Y</div>
+      <div class="badge-icon">
+        <img src="{{ url_for('static', filename='yabatech_logo.png') }}" alt="">
+      </div>
       <div>
         <strong>YABATECH Student Portal</strong>
         <span>Excellence Through Prediction</span>

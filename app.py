@@ -8,8 +8,19 @@ import csv
 
 from flask import Flask, Response, redirect, render_template, request, send_from_directory, session, url_for
 
-from src.batch import BatchError, build_template_csv, parse_upload, run_batch, validate_and_prepare
+from src.batch import (
+    BatchError,
+    build_template_csv,
+    is_course_roster,
+    is_next_semester_forecast,
+    parse_upload,
+    run_batch,
+    run_course_batch,
+    run_next_semester_batch,
+    validate_and_prepare,
+)
 from src.config import FEATURE_COLUMNS, FIGURES_DIR, METRICS_PATH
+from src.course_planner import MAX_COURSES, calculate_course_gpa
 from src.factor_model import (
     FACTOR_FIELDS,
     FACTOR_METRICS_PATH,
@@ -19,6 +30,7 @@ from src.factor_model import (
 from src.history import WrongPin, build_trend_chart, delete_history, get_history, save_entry
 from src.history import delete_history_as_admin, get_admin_overview
 from src.predict import predict_performance
+from src.next_semester import build_forecast_remark, forecast_next_semester
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-change-this-secret")
@@ -139,13 +151,119 @@ def batch_predict():
             all_columns=FEATURE_COLUMNS,
         ), 400
 
-    outcome = run_batch(df, identity_map)
+    if is_next_semester_forecast(df):
+        outcome = run_next_semester_batch(df)
+    elif is_course_roster(df):
+        outcome = run_course_batch(df, identity_map)
+    else:
+        outcome = run_batch(df, identity_map)
     return render_template("batch_results_fragment.html", outcome=outcome)
 
 
 @app.route("/quick-check", methods=["GET"])
 def quick_check():
-    return render_template("index.html", fields=FORM_FIELDS)
+    return render_template(
+        "index.html",
+        fields=FORM_FIELDS,
+        course_count=1,
+        course_input_rows=[],
+    )
+
+
+def _course_rows_from_form(form) -> list[dict]:
+    try:
+        course_count = int(form.get("course_count", ""))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Choose a whole number of courses.") from exc
+    if not 1 <= course_count <= MAX_COURSES:
+        raise ValueError(f"Choose between 1 and {MAX_COURSES} courses.")
+
+    return [
+        {
+            "name": form.get(f"course_name_{index}", ""),
+            "assessment_type": form.get(f"assessment_type_{index}", ""),
+            "credits": form.get(f"course_credits_{index}", ""),
+            "exam_score": form.get(f"exam_score_{index}", ""),
+            "test_score": form.get(f"test_score_{index}", ""),
+            "assignment_score": form.get(f"assignment_score_{index}", ""),
+            "practical_score": form.get(f"practical_score_{index}", ""),
+        }
+        for index in range(course_count)
+    ]
+
+
+def _course_input_rows_from_form(form, course_count: int) -> list[dict]:
+    if not 1 <= course_count <= MAX_COURSES:
+        return []
+    return [
+        {
+            "name": form.get(f"course_name_{index}", ""),
+            "assessment_type": form.get(f"assessment_type_{index}", "with_practical"),
+            "credits": form.get(f"course_credits_{index}", ""),
+            "exam_score": form.get(f"exam_score_{index}", ""),
+            "test_score": form.get(f"test_score_{index}", ""),
+            "assignment_score": form.get(f"assignment_score_{index}", ""),
+            "practical_score": form.get(f"practical_score_{index}", ""),
+        }
+        for index in range(course_count)
+    ]
+
+
+@app.route("/quick-check/courses/calculate", methods=["POST"])
+def quick_check_courses():
+    raw_count = request.form.get("course_count", "1")
+    try:
+        rows = _course_rows_from_form(request.form)
+        summary = calculate_course_gpa(rows)
+    except ValueError as exc:
+        try:
+            course_count = int(raw_count)
+        except ValueError:
+            course_count = 1
+        return render_template(
+            "index.html",
+            fields=FORM_FIELDS,
+            course_count=raw_count,
+            course_input_rows=_course_input_rows_from_form(request.form, course_count),
+            course_error=str(exc),
+        ), 400
+
+    return render_template("course_result.html", summary=summary, forecast=None, advice=None)
+
+
+@app.route("/quick-check/courses/forecast", methods=["POST"])
+def quick_check_courses_forecast():
+    raw_count = request.form.get("course_count", "1")
+    try:
+        rows = _course_rows_from_form(request.form)
+        summary = calculate_course_gpa(rows)
+    except ValueError as exc:
+        try:
+            course_count = int(raw_count)
+        except ValueError:
+            course_count = 1
+        return render_template(
+            "index.html",
+            fields=FORM_FIELDS,
+            course_count=raw_count,
+            course_input_rows=_course_input_rows_from_form(request.form, course_count),
+            course_error=str(exc),
+        ), 400
+
+    forecast = forecast_next_semester([course["score"] for course in summary["courses"]])
+    advice = build_forecast_remark(
+        "your current course average",
+        forecast["current_average"],
+        forecast["forecast_score"],
+        forecast["classification"],
+        forecast["score_mae"],
+    )
+    return render_template(
+        "course_result.html",
+        summary=summary,
+        forecast=forecast,
+        advice=advice,
+    )
 
 
 @app.route("/quick-check/predict", methods=["POST"])

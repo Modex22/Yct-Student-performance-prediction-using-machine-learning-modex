@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Course CGPA Estimate — YABATECH Performance Predictor{% endblock %}
+{% block page_title %}Course CGPA estimate{% endblock %}
+{% block page_subtitle %}
+  <p class="subtitle">Review your course totals and credit-weighted CGPA.</p>
+{% endblock %}
+{% block content %}
+  <section class="course-result">
+    <div class="stat-tiles">
+      <div class="stat-tile">
+        <span class="stat-value">{{ summary.cgpa }}</span>
+        <span class="stat-label">Estimated CGPA / 4.0</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-value">{{ summary.average_score }}</span>
+        <span class="stat-label">Average course score</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-value">{{ summary.total_credits }}</span>
+        <span class="stat-label">Total credit units</span>
+      </div>
+    </div>
+
+    <div class="results-panel">
+      <div class="results-panel-head">
+        <h2>Course breakdown</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Assessment scheme</th>
+              <th>Credit units</th>
+              <th>Total score</th>
+              <th>Classification</th>
+              <th>Grade point</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for course in summary.courses %}
+              <tr>
+                <td>{{ course.name }}</td>
+                <td>{{ "With practical" if course.assessment_type == "with_practical" else "Without practical" }}</td>
+                <td class="tabular">{{ course.credits }}</td>
+                <td class="tabular">{{ course.score }} / 100</td>
+                <td>{{ course.classification }}</td>
+                <td class="tabular">{{ course.grade_point }} / 4</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if forecast %}
+      <div class="course-forecast">
+        <h2>Next-semester estimate</h2>
+        <p>
+          Current average: <strong>{{ forecast.current_average }}/100</strong>
+          · Estimated next-semester average:
+          <strong>{{ forecast.forecast_score }}/100 &plusmn;{{ forecast.score_mae }}</strong>
+          · <strong>{{ forecast.classification }}</strong>
+        </p>
+        <div class="counsellor-note">
+          <span class="counsellor-note-label">Study advice</span>
+          <p>{{ advice }}</p>
+        </div>
+        <p class="field-help">This is an overall-average forecast trained from paired semester results, not a separate prediction for each course.</p>
+      </div>
+    {% else %}
+      <div class="course-forecast-action">
+        <p>The CGPA is ready. Continue to estimate your overall next-semester average and get study advice.</p>
+        <form method="post" action="{{ url_for('quick_check_courses_forecast') }}">
+          <input type="hidden" name="course_count" value="{{ summary.courses|length }}">
+          {% for course in summary.courses %}
+            {% set i = loop.index0 %}
+            <input type="hidden" name="course_name_{{ i }}" value="{{ course.name }}">
+            <input type="hidden" name="assessment_type_{{ i }}" value="{{ course.assessment_type }}">
+            <input type="hidden" name="course_credits_{{ i }}" value="{{ course.credits }}">
+            <input type="hidden" name="exam_score_{{ i }}" value="{{ course.exam_score }}">
+            <input type="hidden" name="test_score_{{ i }}" value="{{ course.test_score }}">
+            <input type="hidden" name="assignment_score_{{ i }}" value="{{ course.assignment_score }}">
+            {% if course.assessment_type == "with_practical" %}
+              <input type="hidden" name="practical_score_{{ i }}" value="{{ course.practical_score }}">
+            {% endif %}
+          {% endfor %}
+          <button type="submit" class="btn-primary">Predict second-semester result &amp; advice</button>
+        </form>
+      </div>
+    {% endif %}
+
+    <a class="btn-secondary" href="{{ url_for('quick_check') }}">Back to score estimator</a>
+  </section>
+{% endblock %}

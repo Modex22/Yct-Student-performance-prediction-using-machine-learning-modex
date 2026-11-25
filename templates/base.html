@@ -26,7 +26,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
           Batch Upload
         </a>
-        <a class="nav-item {% if request.endpoint in ['quick_check', 'quick_check_predict'] %}active{% endif %}" href="{{ url_for('quick_check') }}">
+        <a class="nav-item {% if request.endpoint in ['quick_check', 'quick_check_predict', 'quick_check_courses', 'quick_check_courses_forecast'] %}active{% endif %}" href="{{ url_for('quick_check') }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2"/><path d="M9.2 12.4l2 2 3.4-3.6"/></svg>
           Check My Score
         </a>

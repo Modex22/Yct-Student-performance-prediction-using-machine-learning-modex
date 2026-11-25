@@ -8,7 +8,15 @@
 } %}
 
 {% if outcome.truncated %}
-  <div class="batch-notice">Only the first {{ s.n_students }} rows were processed (file had {{ outcome.n_input_rows }}+ rows).</div>
+  <div class="batch-notice">
+    {% if outcome.mode == "course" %}
+      Only the first {{ 20000 if outcome.n_input_rows > 20000 else 1000 }} course rows were processed (file had {{ outcome.n_input_rows }} rows).
+    {% elif outcome.mode == "forecast" %}
+      Only the first 1000 scanned student rows were processed (file had {{ outcome.n_input_rows }} rows).
+    {% else %}
+      Only the first {{ s.n_students }} rows were processed (file had {{ outcome.n_input_rows }}+ rows).
+    {% endif %}
+  </div>
 {% endif %}
 
 {% if outcome.warnings %}
@@ -19,6 +27,123 @@
     </ul>
   </details>
 {% endif %}
+
+{% if outcome.mode == "forecast" %}
+  <div class="stat-tiles">
+    <div class="stat-tile">
+      <span class="stat-value">{{ s.n_students }}</span>
+      <span class="stat-label">Students scanned</span>
+    </div>
+    <div class="stat-tile">
+      <span class="stat-value">{{ s.avg_current_score }}</span>
+      <span class="stat-label">Current average mark</span>
+    </div>
+    <div class="stat-tile">
+      <span class="stat-value">{{ s.avg_forecast_score }}</span>
+      <span class="stat-label">Estimated next-semester average</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h3>Estimated next-semester classification</h3>
+    {% set max_class = (s.classification_counts.values() | list | max) or 1 %}
+    <div class="hbar-list">
+      {% for label, count in s.classification_counts.items() %}
+        <div class="hbar-row">
+          <span class="hbar-label">{{ label }}</span>
+          <div class="hbar-track"><div class="hbar-fill {{ classification_class.get(label, '') }}" style="width: {{ count / max_class * 100 }}%"></div></div>
+          <span class="hbar-count">{{ count }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="results-panel">
+    <div class="results-panel-head">
+      <h3>Next-semester forecast by student</h3>
+      <button type="button" class="btn-ghost" id="export-csv-btn">Download CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table class="results-table">
+        <thead>
+          <tr><th>Student code</th><th>Courses scanned</th><th>Current average</th><th>Estimated next-semester average</th><th>Classification</th><th>Remark</th></tr>
+        </thead>
+        <tbody>
+          {% for r in outcome.results %}
+            <tr>
+              <td>{{ r.student_id }}</td>
+              <td>{{ r.course_count }}</td>
+              <td class="tabular">{{ r.current_average }}</td>
+              <td class="tabular">{{ r.forecast_score }} <span class="muted">±{{ r.score_mae }}</span></td>
+              <td><span class="badge {{ classification_class.get(r.classification, '') }}">{{ r.classification }}</span></td>
+              <td class="note-cell">{{ r.remark }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% elif outcome.mode == "course" %}
+  <div class="batch-notice">
+    Course final scores are read directly from the workbook and classified using the confirmed score bands. The supplied workbook contains estimated demonstration scores.
+  </div>
+  {% set s = outcome.summary %}
+  <div class="stat-tiles">
+    <div class="stat-tile">
+      <span class="stat-value">{{ s.n_students }}</span>
+      <span class="stat-label">Students scored</span>
+    </div>
+    <div class="stat-tile">
+      <span class="stat-value">{{ s.avg_score }}</span>
+      <span class="stat-label">Average course score</span>
+    </div>
+    <div class="stat-tile stat-tile-risk">
+      <span class="stat-value">{{ s.at_risk_count }}</span>
+      <span class="stat-label">At-risk students</span>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Student classification breakdown</h3>
+    {% set max_class = (s.classification_counts.values() | list | max) or 1 %}
+    <div class="hbar-list">
+      {% for label, count in s.classification_counts.items() %}
+        <div class="hbar-row">
+          <span class="hbar-label">{{ label }}</span>
+          <div class="hbar-track"><div class="hbar-fill {{ 'badge-risk' if label == 'Fail' else 'badge-good' }}" style="width: {{ (count / max_class * 100) if max_class else 0 }}%"></div></div>
+          <span class="hbar-count">{{ count }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="results-panel">
+    <div class="results-panel-head">
+      <h3>Final course scores</h3>
+      <button type="button" class="btn-ghost" id="export-csv-btn">Download CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table class="results-table">
+        <thead>
+          <tr><th>Student</th><th>Average score</th><th>Classification</th><th>Course</th><th>Final score</th></tr>
+        </thead>
+        <tbody>
+          {% for r in outcome.results %}
+            {% for course in r.courses %}
+              <tr>
+                {% if loop.first %}
+                  <td rowspan="{{ r.courses|length }}">{{ r.display_name }}</td>
+                  <td class="tabular" rowspan="{{ r.courses|length }}">{{ r.average_score }}</td>
+                  <td rowspan="{{ r.courses|length }}"><span class="badge {{ classification_class.get(r.classification, '') }}">{{ r.classification }}</span></td>
+                {% endif %}
+                <td>{{ course.course }}</td>
+                <td class="tabular">{{ course.score|round(1) }}</td>
+              </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
 
 <div class="stat-tiles">
   <div class="stat-tile">
@@ -128,3 +253,4 @@
     </table>
   </div>
 </div>
+{% endif %}

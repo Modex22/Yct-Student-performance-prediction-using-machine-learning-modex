@@ -3,10 +3,19 @@
 {% block page_title %}Upload a class roster{% endblock %}
 {% block page_subtitle %}
   <p class="subtitle">
-    One row per student, the usual way a class list already exists — as a spreadsheet.
-    Every row is scored in one pass: predicted score, ND/HND-style classification, and a
-    counsellor's note per student, plus a class-wide risk breakdown.
+    Upload a course-result spreadsheet to review final marks, or scan a photo to assign
+    student codes in order and estimate next-semester average performance.
   </p>
+{% endblock %}
+{% block topbar_extra %}
+  <button type="button" class="camera-launch" id="camera-launch" aria-label="Take a photo of a result sheet">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 7.5h3l1.5-2h7L17 7.5h3A2 2 0 0122 9.5v8A2 2 0 0120 19.5H4A2 2 0 012 17.5v-8A2 2 0 014 7.5z"/>
+      <circle cx="12" cy="13.5" r="3.5"/>
+      <path d="M17.5 10.5h.01"/>
+    </svg>
+    <span>Snap result</span>
+  </button>
 {% endblock %}
 {% block content %}
   <a class="student-callout" href="{{ url_for('quick_check') }}">
@@ -25,7 +34,6 @@
     </label>
     <div class="upload-actions">
       <button type="submit" class="btn-primary" id="submit-btn" disabled>Scan &amp; predict</button>
-      <button type="button" class="btn-secondary" id="example-btn">Try an example roster</button>
       <a class="btn-link" href="{{ url_for('batch_template') }}">Download CSV template</a>
     </div>
     <p class="privacy-note">
@@ -38,27 +46,37 @@
   <section class="photo-roster" aria-labelledby="photo-roster-title">
     <div class="photo-roster-heading">
       <div>
-        <p class="eyebrow">Lecturer photo upload · current-risk screening</p>
-        <h2 id="photo-roster-title">Identify students who may be at risk now</h2>
-        <p class="subtitle">The purpose of this lecturer workflow is to highlight students who may need support based on marks already recorded—not to predict their final scores.</p>
+        <p class="eyebrow">Photo scan · next-semester forecast</p>
+        <h2 id="photo-roster-title">Scan a course result sheet</h2>
+        <p class="subtitle">Scan the marks table to assign students SST001, SST002, and so on in page order, then estimate next-semester average course scores.</p>
+      </div>
+    </div>
+    <div class="photo-example">
+      <img src="{{ url_for('static', filename='example_grade_sheet.png') }}" alt="Example Yaba College of Technology course result sheet">
+      <div>
+        <strong>Try the example result sheet</strong>
+        <p>Load this sample image into the scanner to preview next-semester forecasting.</p>
+        <button type="button" class="btn-secondary" id="example-btn">Use example image</button>
       </div>
     </div>
     <label class="photo-picker" for="photo-files">
+      <span class="photo-picker-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7.5h3l1.5-2h7L17 7.5h3A2 2 0 0122 9.5v8A2 2 0 0120 19.5H4A2 2 0 012 17.5v-8A2 2 0 014 7.5z"/>
+          <circle cx="12" cy="13.5" r="3.5"/>
+        </svg>
+      </span>
       <span class="dropzone-title">Choose or take sheet photos</span>
       <span class="dropzone-sub" id="photo-filenames">JPG, PNG or WebP · multiple pages supported</span>
       <input type="file" id="photo-files" accept="image/*" capture="environment" multiple hidden>
     </label>
     <div class="upload-actions">
-      <button type="button" class="btn-primary" id="photo-scan-btn" disabled>Read sheet photos</button>
-      <button type="button" class="btn-secondary" id="photo-analyze-btn" disabled>Estimate final scores (four components)</button>
+      <button type="button" class="btn-primary" id="photo-scan-btn" disabled>Scan result sheet</button>
+      <button type="button" class="btn-secondary" id="photo-analyze-btn" disabled>Estimate next semester</button>
     </div>
     <p class="photo-progress" id="photo-progress" aria-live="polite"></p>
-    <label class="photo-review-label" for="photo-csv">Review and correct the extracted CSV before continuing.</label>
-    <textarea id="photo-csv" class="photo-review" rows="10" spellcheck="false" placeholder="Extracted rows will appear here for review…"></textarea>
-    <div class="photo-limit-note" role="note">
-      <strong>What the analyzer currently supports</strong>
-      <p>Photo OCR creates an editable draft, but the existing analyzer still estimates final scores from four inputs: exam, test/CA, assignment and practical. It does not yet screen course-by-course marks or cumulative GPA directly for current risk. Check OCR carefully, and don’t treat its current predictions as a current-risk assessment for sheets like the examples.</p>
-    </div>
+    <label class="photo-review-label" for="photo-csv">Review and correct the detected course marks before estimating. Student codes follow the order shown.</label>
+    <textarea id="photo-csv" class="photo-review" rows="10" spellcheck="false" placeholder="Detected student codes and course marks will appear here…"></textarea>
     <p class="privacy-note">Images are processed locally in this browser and are not uploaded. OCR may misread names and marks, so verify the extracted draft before using it.</p>
   </section>
 
@@ -95,12 +113,13 @@
   const photoCsv = document.getElementById("photo-csv");
   const photoProgress = document.getElementById("photo-progress");
   const photoNames = document.getElementById("photo-filenames");
+  const cameraLaunch = document.getElementById("camera-launch");
 
   const PHRASES = [
-    "Reading rows…",
-    "Scoring students…",
-    "Weighing exam, test, assignment & practical scores…",
-    "Compiling class report…",
+    "Reading student rows…",
+    "Checking course final marks…",
+    "Estimating next-semester performance…",
+    "Preparing the class report…",
   ];
 
   fileInput.addEventListener("change", () => {
@@ -113,6 +132,15 @@
     const files = Array.from(photoInput.files || []);
     photoNames.textContent = files.length ? files.map((f) => f.name).join(", ") : "JPG, PNG or WebP · multiple pages supported";
     photoScanBtn.disabled = files.length === 0;
+    if (files.length) {
+      document.getElementById("photo-roster-title").scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => photoScanBtn.click(), 350);
+    }
+  });
+
+  cameraLaunch.addEventListener("click", () => {
+    document.querySelector(".photo-roster").scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => photoInput.click(), 350);
   });
 
   function csvCell(value) {
@@ -137,41 +165,65 @@
         });
       }
       const output = [];
+      let studentIndex = 0;
       for (let i = 0; i < files.length; i++) {
         photoProgress.textContent = `Reading page ${i + 1} of ${files.length}…`;
         const bitmap = await createImageBitmap(files[i]);
-        const cellGap = Math.max(14, bitmap.width * 0.014);
+        const crop = {
+          x: 0,
+          y: Math.round(bitmap.height * 0.13),
+          width: Math.round(bitmap.width * 0.54),
+          height: Math.round(bitmap.height * 0.60),
+        };
+        const canvas = document.createElement("canvas");
+        canvas.width = 1100;
+        canvas.height = 900;
+        canvas.getContext("2d").drawImage(
+          bitmap, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height
+        );
         bitmap.close();
-        const result = await window.Tesseract.recognize(files[i], "eng", {
+        const result = await window.Tesseract.recognize(canvas, "eng", {
           logger: (m) => {
             if (m.status === "recognizing text" && m.progress != null) {
               photoProgress.textContent = `Reading page ${i + 1} of ${files.length}: ${Math.round(m.progress * 100)}%`;
             }
           },
-          tessedit_pageseg_mode: "1",
+          tessedit_pageseg_mode: "6",
         });
-        const lines = (result.data.lines || []).map((line) => {
-          const words = (line.words || []).filter((word) => word.text && word.text.trim());
-          if (!words.length) return [];
-          // Preserve approximate cell gaps using the OCR word positions.
-          const cells = [];
-          let cell = words[0].text;
-          let right = words[0].bbox.x1;
-          for (const word of words.slice(1)) {
-            const gap = word.bbox.x0 - right;
-            if (gap > cellGap) { cells.push(cell); cell = word.text; }
-            else cell += " " + word.text;
-            right = word.bbox.x1;
+        for (const line of result.data.lines || []) {
+          const scores = Array(15).fill("");
+          let found = 0;
+          for (const word of line.words || []) {
+            const centerX = (word.bbox.x0 + word.bbox.x1) / 2;
+            if (centerX < 100 || centerX > 1090) continue;
+            const column = Math.round((centerX - 141) / 64);
+            const text = word.text.trim().replace(/[|,]/g, "");
+            if (column < 0 || column >= scores.length || !/^\d{1,3}$/.test(text)) continue;
+            const score = Number(text);
+            if (score > 100) continue;
+            scores[column] = String(score);
+            found++;
           }
-          cells.push(cell);
-          return cells;
-        }).filter((row) => row.length);
-        output.push(...lines);
+          if (found < 4) continue;
+          studentIndex++;
+          output.push([`SST${String(studentIndex).padStart(3, "0")}`, ...scores]);
+        }
       }
-      const width = Math.max(1, ...output.map((row) => row.length));
-      photoCsv.value = output.map((row) => Array.from({ length: width }, (_, i) => csvCell(row[i] || "")).join(",")).join("\n");
+      if (!output.length) {
+        photoCsv.value = "";
+        photoAnalyzeBtn.disabled = true;
+        photoProgress.textContent = "No course-score rows were detected. Use a clear, straight-on photo of the marks table.";
+        return;
+      }
+      const header = ["forecast_next_semester", "student_id", ...Array.from(
+        { length: 15 }, (_, i) => `course_${String(i + 1).padStart(2, "0")}_score`
+      )];
+      photoCsv.value = [
+        header,
+        ...output.map((row) => ["yes", ...row]),
+      ].map((row) => row.map(csvCell).join(",")).join("\n");
       photoAnalyzeBtn.disabled = false;
-      photoProgress.textContent = `Read ${output.length} lines. Review the extracted cells and correct the headers and marks before analysis.`;
+      photoProgress.textContent = `Detected ${output.length} student rows. Check every mark and student code, then estimate next-semester performance.`;
     } catch (err) {
       photoProgress.textContent = err.message || "Photo reading failed. Try a brighter, sharper photo.";
     } finally {
@@ -224,9 +276,21 @@
   });
 
   exampleBtn.addEventListener("click", async () => {
-    const res = await fetch("{{ url_for('batch_template') }}");
-    const blob = await res.blob();
-    submitFile(new File([blob], "yabatech_roster_template.csv", { type: "text/csv" }));
+    exampleBtn.disabled = true;
+    photoProgress.textContent = "Loading the example result sheet…";
+    try {
+      const response = await fetch("{{ url_for('static', filename='example_grade_sheet.png') }}");
+      if (!response.ok) throw new Error("Could not load the example image.");
+      const file = new File([await response.blob()], "example_grade_sheet.png", { type: "image/png" });
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      photoInput.files = transfer.files;
+      photoInput.dispatchEvent(new Event("change", { bubbles: true }));
+    } catch (err) {
+      photoProgress.textContent = err.message || "Could not load the example image.";
+    } finally {
+      exampleBtn.disabled = false;
+    }
   });
 
   // CSV export: reads the visible results table straight out of the DOM

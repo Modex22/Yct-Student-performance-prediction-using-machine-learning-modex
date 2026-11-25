@@ -1,0 +1,14 @@
+{
+  "target": "mean next-semester course final score (0-100)",
+  "intercept": 17.970308769136942,
+  "slope": 0.6244736083029466,
+  "training_students": 132,
+  "first_semester_observed_course_scores": 1024,
+  "first_semester_estimated_course_scores_excluded": 1088,
+  "holdout_r2": 0.5835134351800606,
+  "holdout_mae": 3.9509728203075016,
+  "cross_validation_method": "Repeated 5-fold cross-validation (10 repeats)",
+  "cross_validation_r2": 0.3971138906518391,
+  "cross_validation_mae": 3.9259513683135436,
+  "source": "User-provided YABATECH semester workbooks; first-semester estimated scores excluded from input averages"
+}

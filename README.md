@@ -59,8 +59,27 @@ are illustrative until it's retrained on real, anonymized records.
    `.csv`/`.xlsx` class roster, every row is validated and scored in one
    pass, and you get back a class dashboard (average score, pass rate,
    classification breakdown, score histogram, a ranked at-risk list) plus a
-   full per-student results table. A scanning animation plays while the
-   file is processed. `/batch/template` downloads a ready-to-fill CSV.
+   full per-student results table. Course-results workbooks can be processed
+   from their course final scores directly; the app displays each course mark
+   and summarizes each student's average using the confirmed score bands,
+   without requiring the four-component quick-check fields or predicting GPA.
+   The photo scanner can also assign SST001-style IDs in scan order and
+   estimate the next-semester average course score from scanned final marks.
+   That forecast is trained on 132 matched students from the supplied
+   first- and second-semester workbooks. Only observed first-semester marks
+   are used; estimated marks are excluded. Repeated 5-fold cross-validation
+   MAE is about 3.93 points (R² about 0.397), and a separate 80/20 holdout
+   MAE is about 3.95 points (R² about 0.584). These are internal results from
+   one cohort, not independent validation; the second-semester workbook has
+   no row-level score-source flag, so predictions remain planning estimates.
+   Review OCR marks before estimating. The report includes a per-student
+   remark on expected performance trend and classification. A scanning
+   animation plays while the file is processed. Retrain with
+   `python -m src.train_next_semester first-semester.xlsx second-semester.xlsx`
+   using the two workbook paths;
+   the output model contains aggregate metrics and coefficients only, never
+   student IDs or marks.
+   `/batch/template` downloads a ready-to-fill CSV for the four-component workflow.
 6. **Check my score** (`/quick-check`) — the same prediction for one
    student filling in their own four scores, instead of a roster. Shows a
    score breakdown (each component's raw contribution vs. the model's
@@ -69,6 +88,13 @@ are illustrative until it's retrained on real, anonymized records.
    than it is). Optionally, ticking "save to history" (with a matric
    number **and a PIN**) stores that one result — see below; nothing is
    saved by default.
+   The page also includes a multi-course calculator: enter course names,
+   credit units, and marks using either the practical (60/10/10/20) or
+   non-practical (60/20/20) scheme. Its credit-weighted 4.0 CGPA mapping
+   follows the app's score classifications and is illustrative, not an
+   official transcript calculation. After calculating CGPA, students can
+   request an overall next-semester average forecast and advice; the current
+   model does not forecast individual course marks.
 7. **History** (`/history`, `src/history.py`) — opt-in only: look up a
    matric number *with its PIN* to see every result explicitly saved for
    it, plus a trend chart of predicted score over time. The PIN is set on
@@ -80,8 +106,8 @@ are illustrative until it's retrained on real, anonymized records.
    should sit behind proper institutional login instead. Batch uploads are
    never saved here.
 8. **Model info** (`/about`) — how each candidate model performed, and the
-   caveats on the ND/HND classification cutoffs and the synthetic training
-   data.
+   caveats on the ND/HND classification cutoffs and semester-forecast
+   validation.
 
 Current results on the synthetic dataset: best regressor is Linear
 Regression (test R² ≈ 0.97, MAE ≈ 1.7 points on a 0-100 scale — very high
@@ -120,6 +146,7 @@ server-side, consistent with how the rest of the app already worked.
 │   ├── train_model.py         # trains, compares, saves models + plots
 │   ├── predict.py             # loads models, predicts one student (+ breakdown, MAE)
 │   ├── batch.py                # parses a roster spreadsheet, runs batch predictions
+│   ├── train_next_semester.py  # trains from paired semester workbooks
 │   ├── history.py             # opt-in save/lookup/delete + trend-chart math (SQLite)
 │   ├── export_web_model.py    # exports the trained model to JSON for a client-side demo
 │   └── export_web_charts.py   # exports chart data for that demo
@@ -156,8 +183,9 @@ python app.py
 ```
 
 Then open http://localhost:5000 — the batch upload page is the home page.
-Click "Try an example roster" to see the full flow without your own file,
-or download the CSV template and fill in a real class list. `/quick-check`
+Use the example result-sheet image to try the photo-scan and next-semester
+forecast flow, or download the CSV template and fill in a real class list.
+`/quick-check`
 lets one student check their own score, and `/about` has model metrics and
 charts.
 
@@ -273,6 +301,6 @@ list, and `COMPONENT_MAX`, if the real assessment structure or mark scheme
 differs) and (b) include a `final_score` (0-100) target and a `pass_fail`
 (`Pass`/`Fail`) target, then re-run `python -m src.train_model`. Everything
 downstream (preprocessing, training, the web app) works unchanged. The
-`CLASSIFICATION_BINS`/`CLASSIFICATION_LABELS` cutoffs in `src/config.py` are
-an illustrative default — update them to Yabatech's actual ND/HND grading
-policy once known.
+`CLASSIFICATION_BINS`/`CLASSIFICATION_LABELS` in `src/config.py` use the
+confirmed YABATECH ND/HND cutoffs: Pass 45, Lower Credit 50, Upper Credit
+60, and Distinction 70.

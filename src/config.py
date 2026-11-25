@@ -12,6 +12,7 @@ FIGURES_DIR = os.path.join(BASE_DIR, "reports", "figures")
 REGRESSOR_PATH = os.path.join(MODELS_DIR, "score_regressor.joblib")
 CLASSIFIER_PATH = os.path.join(MODELS_DIR, "pass_fail_classifier.joblib")
 METRICS_PATH = os.path.join(MODELS_DIR, "metrics.json")
+NEXT_SEMESTER_MODEL_PATH = os.path.join(MODELS_DIR, "next_semester_forecast.json")
 
 # Opt-in "save to history" storage (see src/history.py). On a host with an
 # ephemeral filesystem (e.g. Render free tier, no persistent disk) this
@@ -58,11 +59,9 @@ CATEGORY_LABELS = ["At Risk", "Average", "Good", "Excellent"]
 GRADE_BINS = [-0.1, 39.9, 49.9, 59.9, 69.9, 100]
 GRADE_LABELS = ["F", "D", "C", "B", "A"]
 
-# Nigerian-polytechnic-style (ND/HND) result classification. These cutoffs
-# are an illustrative default modelled loosely on the common NBTE
-# Distinction/Credit/Pass banding — they have NOT been confirmed against
-# Yabatech's actual grading policy. Adjust them here if you have the
-# official cutoffs.
+# Nigerian-polytechnic-style (ND/HND) result classification. YABATECH's
+# confirmed grading cutoffs are 45 for Pass, 50 for Lower Credit, 60 for
+# Upper Credit, and 70 for Distinction.
 CLASSIFICATION_BINS = [-0.1, 44.9, 49.9, 59.9, 69.9, 100]
 CLASSIFICATION_LABELS = ["Fail", "Pass", "Lower Credit", "Upper Credit", "Distinction"]
 

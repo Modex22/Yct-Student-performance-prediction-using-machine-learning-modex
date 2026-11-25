@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Check My Score — YABATECH Performance Predictor{% endblock %}
-{% block page_title %}Check your predicted score{% endblock %}
+{% block page_title %}Estimate your score{% endblock %}
 {% block page_subtitle %}
   <p class="subtitle">
-    Enter your four component scores from your result sheet, each on its own mark scheme
-    (exam/60, test/10, assignment/10, practical/20). If you're a lecturer scoring a whole
-    class instead, use <a href="{{ url_for('batch_upload_page') }}">batch upload</a>.
+    Enter your assessment component scores from your result sheet to estimate your likely final score.
   </p>
 {% endblock %}
 {% block content %}
@@ -56,7 +54,7 @@
       </span>
     </label>
 
-    <button type="submit" class="btn-primary">See my predicted score</button>
+    <button type="submit" class="btn-primary">Generate score estimate</button>
 
     <p class="privacy-note">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
@@ -65,4 +63,149 @@
       later (see the <a href="{{ url_for('history_lookup') }}">History</a> page). Batch uploads are never stored.
     </p>
   </form>
+
+  <section class="course-calculator" aria-labelledby="course-calculator-title">
+    <div class="course-calculator-heading">
+      <div>
+        <p class="eyebrow">Multi-course planner</p>
+        <h2 id="course-calculator-title">Calculate CGPA and forecast next semester</h2>
+        <p class="subtitle">Enter the assessment marks for each course. You can choose a different mark breakdown for each one.</p>
+      </div>
+    </div>
+
+    {% if course_error %}
+      <div class="disclaimer" role="alert">{{ course_error }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('quick_check_courses') }}" id="course-gpa-form">
+      <div class="form-field course-count-field">
+        <label for="course-count">Number of courses</label>
+        <input type="number" id="course-count" name="course_count" min="1" max="20" step="1"
+               value="{{ course_count|default(1) }}" required>
+        <span class="field-help">Add up to 20 courses.</span>
+      </div>
+
+      <div id="course-rows" class="course-rows"></div>
+      <button type="submit" class="btn-primary">Calculate CGPA</button>
+    </form>
+
+    <p class="course-grading-note">
+      CGPA uses a credit-weighted 4.0 scale: Distinction 4, Upper Credit 3, Lower Credit 2,
+      Pass 1, Fail 0. This conversion is illustrative; confirm your department's official grade-point rules.
+    </p>
+  </section>
+
+  <template id="course-row-template">
+    <fieldset class="course-row">
+      <legend>Course __course__</legend>
+      <div class="course-details-grid">
+        <div class="form-field">
+          <label for="course-name-__index__">Course name</label>
+          <input type="text" id="course-name-__index__" name="course_name___index__"
+                 data-field="name" maxlength="80" placeholder="e.g. Mathematics" required>
+        </div>
+        <div class="form-field">
+          <label for="course-scheme-__index__">Assessment breakdown</label>
+          <select id="course-scheme-__index__" name="assessment_type___index__" data-field="assessment_type" required>
+            <option value="with_practical">With practical (60 / 10 / 10 / 20)</option>
+            <option value="without_practical">Without practical (60 / 20 / 20)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="course-credits-__index__">Credit units</label>
+          <input type="number" id="course-credits-__index__" name="course_credits___index__"
+                 data-field="credits" min="0.1" step="0.1" required>
+        </div>
+      </div>
+      <div class="course-components">
+        <div class="form-field">
+          <label for="exam-score-__index__">Exam / 60</label>
+          <input type="number" id="exam-score-__index__" name="exam_score___index__"
+                 data-field="exam_score" min="0" max="60" step="0.1" required>
+        </div>
+        <div class="form-field">
+          <label for="test-score-__index__">Test / 10</label>
+          <input type="number" id="test-score-__index__" name="test_score___index__"
+                 data-field="test_score" data-max-with-practical="10" data-max-without-practical="20"
+                 min="0" max="10" step="0.1" required>
+        </div>
+        <div class="form-field">
+          <label for="assignment-score-__index__">Assignment / 10</label>
+          <input type="number" id="assignment-score-__index__" name="assignment_score___index__"
+                 data-field="assignment_score" data-max-with-practical="10" data-max-without-practical="20"
+                 min="0" max="10" step="0.1" required>
+        </div>
+        <div class="form-field practical-field">
+          <label for="practical-score-__index__">Practical / 20</label>
+          <input type="number" id="practical-score-__index__" name="practical_score___index__"
+                 data-field="practical_score" min="0" max="20" step="0.1" required>
+        </div>
+      </div>
+    </fieldset>
+  </template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const countInput = document.getElementById("course-count");
+  const rowsContainer = document.getElementById("course-rows");
+  const rowTemplate = document.getElementById("course-row-template").innerHTML;
+  const initialRows = {{ course_input_rows|default([])|tojson }};
+
+  function updateAssessmentFields(row) {
+    const hasPractical = row.querySelector('[data-field="assessment_type"]').value === "with_practical";
+    row.querySelector(".practical-field").hidden = !hasPractical;
+    row.querySelector('[data-field="practical_score"]').disabled = !hasPractical;
+    row.querySelector('[data-field="practical_score"]').required = hasPractical;
+
+    ["test_score", "assignment_score"].forEach((field) => {
+      const input = row.querySelector(`[data-field="${field}"]`);
+      const maximum = hasPractical ? input.dataset.maxWithPractical : input.dataset.maxWithoutPractical;
+      input.max = maximum;
+      input.closest(".form-field").querySelector("label").textContent =
+        `${field === "test_score" ? "Test" : "Assignment"} / ${maximum}`;
+    });
+  }
+
+  function renderCourseRows(rows) {
+    const count = Number(countInput.value);
+    if (!Number.isInteger(count) || count < 1 || count > 20) {
+      countInput.setCustomValidity("Choose between 1 and 20 courses.");
+      return;
+    }
+    countInput.setCustomValidity("");
+
+    const previousRows = Array.from(rowsContainer.querySelectorAll(".course-row"), (row) => {
+      const values = {};
+      row.querySelectorAll("[data-field]").forEach((input) => {
+        values[input.dataset.field] = input.value;
+      });
+      return values;
+    });
+    const valuesToRestore = rows.length ? rows : previousRows;
+    rowsContainer.replaceChildren();
+
+    for (let index = 0; index < count; index++) {
+      const fragment = document.createElement("div");
+      fragment.innerHTML = rowTemplate
+        .replace(/__index__/g, String(index))
+        .replace(/__course__/g, String(index + 1));
+      const row = fragment.firstElementChild;
+      row.querySelectorAll("[data-field]").forEach((input) => {
+        const value = valuesToRestore[index] && valuesToRestore[index][input.dataset.field];
+        if (value !== undefined && value !== "") input.value = value;
+      });
+      row.querySelector('[data-field="assessment_type"]').addEventListener("change", () => {
+        updateAssessmentFields(row);
+      });
+      updateAssessmentFields(row);
+      rowsContainer.appendChild(row);
+    }
+  }
+
+  countInput.addEventListener("change", () => renderCourseRows([]));
+  renderCourseRows(initialRows);
+})();
+</script>
 {% endblock %}
