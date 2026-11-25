@@ -56,6 +56,16 @@ def test_zero_course_credits_are_rejected():
         }])
 
 
+def test_quick_check_omits_grading_note_but_keeps_course_calculator():
+    from app import app
+
+    response = app.test_client().get("/quick-check")
+
+    assert response.status_code == 200
+    assert b"CGPA uses a credit-weighted 4.0 scale" not in response.data
+    assert b"Calculate CGPA" in response.data
+
+
 def test_forecast_endpoint_rejects_tampered_course_data_without_server_error():
     from app import app
 

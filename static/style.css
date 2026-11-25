@@ -291,7 +291,7 @@ h1 { margin-bottom: 0.25rem; }
 }
 .course-components { margin-top: .9rem; }
 .course-row .form-field[hidden] { display: none; }
-.course-grading-note, .course-forecast-action > p {
+.course-forecast-action > p {
   margin: 1rem 0 0;
   color: var(--muted);
   font-size: .88rem;
