@@ -98,44 +98,61 @@
   </section>
 
   <section class="about-section">
-    <h2>Next-semester forecast</h2>
-    <p>
-      The overall-average forecast was trained on 132 matched students from the
-      supplied semester workbooks. It uses only observed first-semester marks;
-      estimated marks were excluded. Repeated 5-fold cross-validation produced
-      an average MAE of 3.93 points and R² of 0.397. A separate 80/20 holdout
-      produced an MAE of 3.95 points and R² of 0.584. These are internal results
-      from one cohort, not independent validation; the second-semester workbook
-      does not provide a row-level score-source flag, so treat forecasts as
-      planning estimates rather than guaranteed outcomes.
-    </p>
+    <h2>Next-semester average model comparison</h2>
+    {% if forecast_model.get("benchmark_results") %}
+      <p>
+        These models estimate the overall next-semester average from each
+        student's observed first-semester course average. The benchmark uses
+        {{ forecast_model.training_students }} matched students; estimated
+        first-semester marks were excluded. It is separate from the
+        four-component final-score estimator.
+      </p>
+      <div class="table-wrap">
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>CV MAE</th>
+              <th>CV R²</th>
+              <th>Holdout MAE</th>
+              <th>Holdout R²</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for result in forecast_model.benchmark_results %}
+              <tr {% if result.model == forecast_model.selected_model %}class="highlight-row"{% endif %}>
+                <td>{{ result.model }}</td>
+                <td>{{ "%.3f"|format(result.cv_mae) }}</td>
+                <td>{{ "%.3f"|format(result.cv_r2) }}</td>
+                <td>{{ "%.3f"|format(result.holdout_mae) }}</td>
+                <td>{{ "%.3f"|format(result.holdout_r2) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">
+        Selected by the lowest mean absolute error across
+        {{ forecast_model.cross_validation_method }}:
+        <strong>{{ forecast_model.selected_model }}</strong>. Holdout metrics
+        are reported separately and were not used for selection. These results
+        come from one cohort, not independent validation; the second-semester
+        workbook has no row-level score-source flag, so predictions are
+        planning estimates.
+      </p>
+    {% else %}
+      <p>No next-semester model comparison is available yet.</p>
+    {% endif %}
   </section>
 
   {% if metrics %}
-    <h2>Best regressor: {{ metrics.best_regressor }}</h2>
-    <div class="table-wrap">
-      <table class="metrics-table">
-        <thead>
-          <tr><th>Model</th><th>CV R²</th><th>Test R²</th><th>Test MAE</th><th>Test RMSE</th></tr>
-        </thead>
-        <tbody>
-          {% for name, m in metrics.regression_results.items() %}
-            <tr {% if name == metrics.best_regressor %}class="highlight-row"{% endif %}>
-              <td>{{ name }}</td>
-              <td>{{ "%.3f"|format(m.cv_r2_mean) }}</td>
-              <td>{{ "%.3f"|format(m.test_r2) }}</td>
-              <td>{{ "%.2f"|format(m.test_mae) }}</td>
-              <td>{{ "%.2f"|format(m.test_rmse) }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
     <h2>Pass/fail classifier (Random Forest)</h2>
     <p>Accuracy: {{ "%.1f"|format(metrics.classifier_metrics.accuracy * 100) }}% &nbsp;|&nbsp;
        F1 score: {{ "%.3f"|format(metrics.classifier_metrics.f1) }}</p>
-    <p class="muted">Trained on {{ metrics.n_train }} students, tested on {{ metrics.n_test }}.</p>
+    <p class="muted">
+      The next-semester forecast was trained on {{ forecast_model.training_students }} matched
+      students; this pass/fail classifier uses a separate reference model.
+    </p>
 
     <h2>Classification bands</h2>
     <p>Predicted scores are mapped to Fail / Pass / Lower Credit / Upper Credit / Distinction
@@ -146,13 +163,32 @@
     <p>No trained model metrics found yet — run <code>python -m src.train_model</code>.</p>
   {% endif %}
 
-  <h2>Feature importance</h2>
-  <img class="figure" src="{{ url_for('figures', filename='feature_importance.png') }}"
-       alt="Feature importance chart" onerror="this.style.display='none'">
-
-  <h2>Actual vs. predicted</h2>
-  <img class="figure" src="{{ url_for('figures', filename='actual_vs_predicted.png') }}"
-       alt="Actual vs predicted scatter plot" onerror="this.style.display='none'">
+  <section class="about-section">
+    <h2>Chapter Four analysis diagrams</h2>
+    <p class="muted">
+      Descriptive diagrams include all populated first-semester scores, including estimates.
+      Predictive and model-evaluation diagrams use observed first-semester inputs and recorded
+      second-semester values, with held-out or cross-validated predictions. The charts show
+      aggregate results only and do not display individual student identifiers.
+    </p>
+    <div class="diagram-grid">
+      {% for diagram in chapter_four_diagrams %}
+        <figure class="diagram-card">
+          <figcaption>
+            <span class="diagram-index">{{ "%02d"|format(loop.index) }}</span>
+            {{ diagram.title }}
+          </figcaption>
+          <img
+            class="figure diagram-image"
+            src="{{ url_for('figures', filename='chapter_four/' + diagram.filename) }}"
+            alt="{{ diagram.title }}"
+            loading="lazy"
+          >
+          <p class="diagram-description">{{ diagram.description }}</p>
+        </figure>
+      {% endfor %}
+    </div>
+  </section>
 
   <hr style="margin: 2.5rem 0; border: none; border-top: 1px solid var(--border);">
 

@@ -19,7 +19,13 @@ from src.batch import (
     run_next_semester_batch,
     validate_and_prepare,
 )
-from src.config import FEATURE_COLUMNS, FIGURES_DIR, METRICS_PATH
+from src.config import (
+    FEATURE_COLUMNS,
+    FIGURES_DIR,
+    METRICS_PATH,
+    NEXT_SEMESTER_MODEL_PATH,
+)
+from src.chapter_four_catalog import CHAPTER_FOUR_DIAGRAMS
 from src.course_planner import MAX_COURSES, calculate_course_gpa
 from src.factor_model import (
     FACTOR_FIELDS,
@@ -363,6 +369,7 @@ def factor_check_predict():
 def about():
     metrics = {}
     factor_metrics = {}
+    forecast_model = {}
     try:
         with open(METRICS_PATH) as f:
             metrics = json.load(f)
@@ -373,10 +380,17 @@ def about():
             factor_metrics = json.load(f)
     except FileNotFoundError:
         pass
+    try:
+        with open(NEXT_SEMESTER_MODEL_PATH) as f:
+            forecast_model = json.load(f)
+    except FileNotFoundError:
+        pass
     return render_template(
         "about.html",
         metrics=metrics,
         factor_metrics=factor_metrics,
+        forecast_model=forecast_model,
+        chapter_four_diagrams=CHAPTER_FOUR_DIAGRAMS,
         kaggle_url=KAGGLE_DATASET_URL,
     )
 

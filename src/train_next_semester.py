@@ -10,13 +10,17 @@ from typing import Any
 
 import numpy as np
 from openpyxl import load_workbook
-from sklearn.linear_model import LinearRegression
+from sklearn.dummy import DummyRegressor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_absolute_error, r2_score
-from sklearn.model_selection import RepeatedKFold, cross_val_score, train_test_split
+from sklearn.model_selection import RepeatedKFold, cross_validate, train_test_split
 
 from src.config import NEXT_SEMESTER_MODEL_PATH
 
 MINIMUM_TRAINING_STUDENTS = 10
+CV_FOLDS = 5
+CV_REPEATS = 10
 
 
 def _read_course_scores(
@@ -106,6 +110,70 @@ def _read_course_scores(
         workbook.close()
 
 
+def _benchmark_models(
+    features: np.ndarray,
+    targets: np.ndarray,
+) -> list[dict[str, Any]]:
+    x_train, x_test, y_train, y_test = train_test_split(
+        features,
+        targets,
+        test_size=0.2,
+        random_state=42,
+    )
+    candidates = {
+        "Linear Regression": LinearRegression(),
+        "Ridge": Ridge(alpha=1.0),
+        "Random Forest": RandomForestRegressor(
+            n_estimators=300,
+            min_samples_leaf=5,
+            random_state=42,
+            n_jobs=1,
+        ),
+        "Gradient Boosting": GradientBoostingRegressor(
+            n_estimators=100,
+            learning_rate=0.05,
+            max_depth=1,
+            min_samples_leaf=5,
+            random_state=42,
+        ),
+        "Mean baseline": DummyRegressor(strategy="mean"),
+    }
+
+    results = []
+    for name, estimator in candidates.items():
+        cv_results = cross_validate(
+            estimator,
+            features,
+            targets,
+            cv=RepeatedKFold(
+                n_splits=CV_FOLDS,
+                n_repeats=CV_REPEATS,
+                random_state=42,
+            ),
+            scoring={
+                "mae": "neg_mean_absolute_error",
+                "r2": "r2",
+            },
+        )
+        estimator.fit(x_train, y_train)
+        holdout_predictions = estimator.predict(x_test)
+        results.append({
+            "model": name,
+            "cv_mae": float(-cv_results["test_mae"].mean()),
+            "cv_r2": float(cv_results["test_r2"].mean()),
+            "cv_mae_folds": [
+                float(value) for value in -cv_results["test_mae"]
+            ],
+            "cv_r2_folds": [
+                float(value) for value in cv_results["test_r2"]
+            ],
+            "holdout_mae": float(mean_absolute_error(y_test, holdout_predictions)),
+            "holdout_r2": float(r2_score(y_test, holdout_predictions)),
+        })
+
+    return sorted(results, key=lambda result: float(result["cv_mae"]))
+
+
 def train_and_save(
     first_semester_path: Path,
     second_semester_path: Path,
@@ -137,47 +205,43 @@ def train_and_save(
 
     features = np.array([current for current, _ in paired], dtype=float).reshape(-1, 1)
     targets = np.array([following for _, following in paired], dtype=float)
-    x_train, x_test, y_train, y_test = train_test_split(
-        features,
-        targets,
-        test_size=0.2,
-        random_state=42,
-    )
-    holdout_model = LinearRegression().fit(x_train, y_train)
-    holdout_predictions = holdout_model.predict(x_test)
-
-    cross_validation = RepeatedKFold(
-        n_splits=5,
-        n_repeats=10,
-        random_state=42,
-    )
-    cv_mae = -cross_val_score(
-        LinearRegression(),
-        features,
-        targets,
-        cv=cross_validation,
-        scoring="neg_mean_absolute_error",
-    )
-    cv_r2 = cross_val_score(
-        LinearRegression(),
-        features,
-        targets,
-        cv=cross_validation,
-        scoring="r2",
-    )
-    model = LinearRegression().fit(features, targets)
+    benchmark_results = _benchmark_models(features, targets)
+    selected_model_name = str(benchmark_results[0]["model"])
+    if selected_model_name == "Linear Regression":
+        model = LinearRegression().fit(features, targets)
+        intercept = float(model.intercept_)
+        slope = float(model.coef_[0])
+    elif selected_model_name == "Ridge":
+        model = Ridge(alpha=1.0).fit(features, targets)
+        intercept = float(model.intercept_)
+        slope = float(model.coef_[0])
+    elif selected_model_name == "Mean baseline":
+        model = DummyRegressor(strategy="mean").fit(features, targets)
+        intercept = float(model.constant_[0])
+        slope = 0.0
+    else:
+        raise ValueError(
+            f"{selected_model_name} had the lowest cross-validation MAE, but the "
+            "forecast runtime currently supports linear model formulas only."
+        )
+    selected_metrics = benchmark_results[0]
     payload = {
         "target": "mean next-semester course final score (0-100)",
-        "intercept": float(model.intercept_),
-        "slope": float(model.coef_[0]),
+        "selected_model": selected_model_name,
+        "selection_criterion": "lowest mean MAE across repeated 5-fold cross-validation",
+        "intercept": intercept,
+        "slope": slope,
         "training_students": len(paired),
         "first_semester_observed_course_scores": source_counts["observed"],
         "first_semester_estimated_course_scores_excluded": source_counts["estimated"],
-        "holdout_r2": float(r2_score(y_test, holdout_predictions)),
-        "holdout_mae": float(mean_absolute_error(y_test, holdout_predictions)),
-        "cross_validation_method": "Repeated 5-fold cross-validation (10 repeats)",
-        "cross_validation_r2": float(cv_r2.mean()),
-        "cross_validation_mae": float(cv_mae.mean()),
+        "holdout_r2": selected_metrics["holdout_r2"],
+        "holdout_mae": selected_metrics["holdout_mae"],
+        "cross_validation_method": (
+            f"Repeated {CV_FOLDS}-fold cross-validation ({CV_REPEATS} repeats)"
+        ),
+        "cross_validation_r2": selected_metrics["cv_r2"],
+        "cross_validation_mae": selected_metrics["cv_mae"],
+        "benchmark_results": benchmark_results,
         "source": (
             "User-provided YABATECH semester workbooks; first-semester estimated "
             "scores excluded from input averages"
@@ -208,7 +272,8 @@ def main() -> None:
     )
     print(
         "Saved forecast model: "
-        f"{model['training_students']} matched students, "
+        f"{model['selected_model']} selected from "
+        f"{len(model['benchmark_results'])} models on {model['training_students']} matched students, "
         f"holdout MAE {model['holdout_mae']:.2f}, "
         f"repeated-CV MAE {model['cross_validation_mae']:.2f}."
     )

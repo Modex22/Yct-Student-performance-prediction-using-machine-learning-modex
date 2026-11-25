@@ -67,18 +67,28 @@ are illustrative until it's retrained on real, anonymized records.
    estimate the next-semester average course score from scanned final marks.
    That forecast is trained on 132 matched students from the supplied
    first- and second-semester workbooks. Only observed first-semester marks
-   are used; estimated marks are excluded. Repeated 5-fold cross-validation
-   MAE is about 3.93 points (R² about 0.397), and a separate 80/20 holdout
-   MAE is about 3.95 points (R² about 0.584). These are internal results from
-   one cohort, not independent validation; the second-semester workbook has
-   no row-level score-source flag, so predictions remain planning estimates.
+   are used; estimated marks are excluded. The Model Info page compares
+   Linear Regression, Ridge, Random Forest, Gradient Boosting, and a mean-only
+   baseline. Linear Regression was selected by repeated 5-fold cross-validation
+   (10 repeats): MAE about 3.93 points (R² about 0.397); its separate 80/20
+   holdout MAE is about 3.95 (R² about 0.584). Ridge is effectively tied on
+   cross-validation MAE. These are internal results from one cohort, not
+   independent validation; the second-semester workbook has no row-level
+   score-source flag, so predictions remain planning estimates.
+   The Model Info page also includes 23 aggregate Chapter Four diagrams.
+   Descriptive charts include populated estimated marks; forecast and
+   classification evaluation uses observed first-semester inputs and the
+   recorded second-semester outcomes. Generate the figures locally with:
+   `python -m src.train_next_semester first-semester.xlsx second-semester.xlsx`
+   followed by
+   `python -m src.chapter_four_diagrams first-semester.xlsx second-semester.xlsx`.
+   The plots are written to `reports/figures/chapter_four/`; the gallery
+   contains aggregate charts only, with no individual student identifiers.
    Review OCR marks before estimating. The report includes a per-student
    remark on expected performance trend and classification. A scanning
-   animation plays while the file is processed. Retrain with
-   `python -m src.train_next_semester first-semester.xlsx second-semester.xlsx`
-   using the two workbook paths;
-   the output model contains aggregate metrics and coefficients only, never
-   student IDs or marks.
+   animation plays while the file is processed. The training command writes
+   aggregate benchmark/fold metrics and coefficients only, never student IDs
+   or marks.
    `/batch/template` downloads a ready-to-fill CSV for the four-component workflow.
 6. **Check my score** (`/quick-check`) — the same prediction for one
    student filling in their own four scores, instead of a roster. Shows a
@@ -147,11 +157,13 @@ server-side, consistent with how the rest of the app already worked.
 │   ├── predict.py             # loads models, predicts one student (+ breakdown, MAE)
 │   ├── batch.py                # parses a roster spreadsheet, runs batch predictions
 │   ├── train_next_semester.py  # trains from paired semester workbooks
+│   ├── chapter_four_catalog.py # Chapter Four chart titles and filenames
+│   ├── chapter_four_diagrams.py # generates aggregate report figures
 │   ├── history.py             # opt-in save/lookup/delete + trend-chart math (SQLite)
 │   ├── export_web_model.py    # exports the trained model to JSON for a client-side demo
 │   └── export_web_charts.py   # exports chart data for that demo
 ├── models/                    # saved pipelines + metrics.json (generated)
-├── reports/figures/           # feature importance & actual-vs-predicted plots (dark theme)
+├── reports/figures/           # dark-theme plots, including Chapter Four diagrams
 ├── instance/                  # history.db (generated, gitignored — see Deploying)
 ├── templates/, static/        # Flask views: dark/green sidebar layout
 └── tests/                     # pytest sanity checks

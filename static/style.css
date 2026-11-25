@@ -907,9 +907,54 @@ h1 { margin-bottom: 0.25rem; }
 }
 .about-method-grid h3 { margin: 0.35rem 0; font-size: 0.95rem; }
 .about-method-grid p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+.diagram-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.diagram-card {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.diagram-card figcaption {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+.diagram-index {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.diagram-card .diagram-image {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+.diagram-description {
+  margin: 0;
+  padding: 0.75rem 1rem 1rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
 @media (max-width: 760px) {
   .about-two-column { grid-template-columns: 1fr; }
   .about-method-grid { grid-template-columns: 1fr 1fr; }
+  .diagram-grid { grid-template-columns: 1fr; }
   .about-details > div { grid-template-columns: 1fr; gap: 0.15rem; }
   .about-banner { padding: 1.25rem; }
 }
