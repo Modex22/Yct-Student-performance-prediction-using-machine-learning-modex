@@ -27,69 +27,6 @@
   </div>
 </section>
 
-<section class="dataset-overview" aria-labelledby="dataset-overview-heading">
-  <div class="dataset-overview-head">
-    <h2 id="dataset-overview-heading">Dataset Overview</h2>
-    <span class="dataset-record-count">{{ dataset_overview.total_students }} student records</span>
-  </div>
-
-  <div class="dataset-overview-grid">
-    <article class="chart-card dataset-chart-card">
-      <h3>Academic Outcome Distribution</h3>
-      {% if dataset_overview.total_students %}
-      <div class="dataset-pie-layout">
-        <div class="dataset-pie"
-             style="--graduate: {{ dataset_overview.graduate_percent }};"
-             role="img"
-             aria-label="{{ dataset_overview.graduate_percent }} percent graduate and {{ dataset_overview.dropout_percent }} percent at-risk">
-          <div class="dataset-pie-center">
-            <strong>{{ dataset_overview.total_students }}</strong>
-            <span>Students</span>
-          </div>
-        </div>
-        <div class="dataset-legend">
-          <div>
-            <span class="legend-dot legend-graduate"></span>
-            <span>Graduate</span>
-            <strong>{{ dataset_overview.graduate_percent }}%</strong>
-          </div>
-          <div>
-            <span class="legend-dot legend-dropout"></span>
-            <span>At Risk</span>
-            <strong>{{ dataset_overview.dropout_percent }}%</strong>
-          </div>
-        </div>
-      </div>
-      {% else %}
-      <div class="empty-state">Dataset summary unavailable.</div>
-      {% endif %}
-    </article>
-
-    <article class="chart-card dataset-chart-card">
-      <h3>Features by Category</h3>
-      {% if dataset_overview.features %}
-      <div class="dataset-feature-bars">
-        {% for feature in dataset_overview.features %}
-        {% set top_category = feature.categories[0] if feature.categories else ('N/A', 0) %}
-        {% set bar_percent = (top_category[1] / dataset_overview.total_students * 100) if dataset_overview.total_students else 0 %}
-        <div class="dataset-feature-row">
-          <div class="dataset-feature-label">
-            <strong>{{ feature.label }}</strong>
-            <span>{{ top_category[0] }}: {{ top_category[1] }}</span>
-          </div>
-          <div class="dataset-feature-track">
-            <div class="dataset-feature-fill" style="width: {{ bar_percent }}%;"></div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty-state">Feature summary unavailable.</div>
-      {% endif %}
-    </article>
-  </div>
-</section>
-
 <section class="landing-features" aria-label="What you can do">
   <article class="landing-feature">
     <span class="feature-number">01</span>

@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import hmac
 import os
-import csv
 
 from flask import Flask, Response, redirect, render_template, request, send_from_directory, session, url_for
 
@@ -68,58 +67,7 @@ def parse_form(form) -> dict:
 
 @app.route("/", methods=["GET"])
 def index():
-    dataset_overview = {
-        "total_students": 0,
-        "graduate_count": 0,
-        "dropout_count": 0,
-        "graduate_percent": 0,
-        "dropout_percent": 0,
-        "features": [],
-    }
-
-    kaggle_path = os.path.join(os.path.dirname(__file__), "data", "kaggle_student_performance.csv")
-    try:
-        with open(kaggle_path, newline="", encoding="utf-8") as csv_file:
-            rows = list(csv.DictReader(csv_file))
-
-        graduate_grades = {"AA", "BA", "BB", "CC", "CB"}
-        graduate_count = sum(row["Grade"] in graduate_grades for row in rows)
-        dropout_count = len(rows) - graduate_count
-        total = len(rows)
-
-        feature_fields = [
-            ("High school type", "High_School_Type"),
-            ("Scholarship", "Scholarship"),
-            ("Additional work", "Additional_Work"),
-            ("Sports activity", "Sports_activity"),
-            ("Attendance", "Attendance"),
-            ("Study hours", "Weekly_Study_Hours"),
-            ("Reading", "Reading"),
-        ]
-        features = []
-        for label, field in feature_fields:
-            counts = {}
-            for row in rows:
-                value = row[field].strip()
-                counts[value] = counts.get(value, 0) + 1
-            features.append({
-                "label": label,
-                "count": sum(counts.values()),
-                "categories": sorted(counts.items(), key=lambda item: item[1], reverse=True)[:3],
-            })
-
-        dataset_overview = {
-            "total_students": total,
-            "graduate_count": graduate_count,
-            "dropout_count": dropout_count,
-            "graduate_percent": round((graduate_count / total) * 100, 1) if total else 0,
-            "dropout_percent": round((dropout_count / total) * 100, 1) if total else 0,
-            "features": features,
-        }
-    except (FileNotFoundError, KeyError, OSError):
-        pass
-
-    return render_template("landing.html", dataset_overview=dataset_overview)
+    return render_template("landing.html")
 
 
 @app.route("/batch", methods=["GET"])
